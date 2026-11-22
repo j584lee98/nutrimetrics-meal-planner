@@ -72,6 +72,8 @@ model Food {
   name              String
   fdcId             Int?                   @unique
   ownerId           String?
+  nutrientBasis     String                 @default("g")
+  portionsJson      String                 @default("[]")
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   owner             User?                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -93,7 +95,8 @@ model Nutrient {
 model FoodNutrient {
   foodId     String
   nutrientId Int
-  per100g    Float
+  per100Unit Float    @map("per100g")
+  derivation String?
   food       Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
   nutrient   Nutrient @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
 
@@ -104,7 +107,7 @@ model FoodNutrientOverride {
   userId     String
   foodId     String
   nutrientId Int
-  per100g    Float
+  per100Unit Float    @map("per100g")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   food       Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
   nutrient   Nutrient @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
@@ -122,26 +125,33 @@ model MealPlan {
   meals     Meal[]
 
   @@index([userId])
+  @@unique([id, userId])
 }
 
 model Meal {
   id         String      @id @default(cuid())
   name       String
-  date       String
+  nameKey    String
+  userId     String
   mealPlanId String
-  mealPlan   MealPlan    @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  mealPlan   MealPlan    @relation(fields: [mealPlanId, userId], references: [id, userId], onDelete: Cascade)
   entries    MealEntry[]
 
-  @@index([mealPlanId, date])
+  @@index([mealPlanId])
+  @@unique([userId, nameKey])
 }
 
 model MealEntry {
-  id     String @id @default(cuid())
-  mealId String
-  foodId String
-  grams  Float
-  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  food   Food   @relation(fields: [foodId], references: [id], onDelete: Restrict)
+  id           String @id @default(cuid())
+  mealId       String
+  foodId       String
+  quantity     Float
+  unitLabel    String @default("g")
+  basisPerUnit Float  @default(1)
+  basis        String @default("g")
+  position     Int    @default(0)
+  meal         Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food         Food   @relation(fields: [foodId], references: [id], onDelete: Restrict)
 
   @@index([mealId])
   @@index([foodId])

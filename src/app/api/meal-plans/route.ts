@@ -11,8 +11,8 @@ export async function GET(request: Request) {
       id: true,
       name: true,
       meals: {
-        select: { id: true, name: true, date: true },
-        orderBy: [{ date: "asc" }, { name: "asc" }, { id: "asc" }],
+        select: { id: true, name: true },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
       },
     },
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
