@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String                 @id @default(cuid())
+  email             String                 @unique
+  passwordHash      String
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  sessions          Session[]
+  mealPlans         MealPlan[]
+  customFoods       Food[]
+  nutrientOverrides FoodNutrientOverride[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Food {
+  id                String                 @id @default(cuid())
+  name              String
+  fdcId             Int?                   @unique
+  ownerId           String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  owner             User?                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  nutrients         FoodNutrient[]
+  nutrientOverrides FoodNutrientOverride[]
+  mealEntries       MealEntry[]
+
+  @@index([ownerId])
+}
+
+model Nutrient {
+  id        Int                    @id
+  name      String
+  unit      String
+  foods     FoodNutrient[]
+  overrides FoodNutrientOverride[]
+}
+
+model FoodNutrient {
+  foodId     String
+  nutrientId Int
+  per100g    Float
+  food       Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  nutrient   Nutrient @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+
+  @@id([foodId, nutrientId])
+}
+
+model FoodNutrientOverride {
+  userId     String
+  foodId     String
+  nutrientId Int
+  per100g    Float
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food       Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  nutrient   Nutrient @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+
+  @@id([userId, foodId, nutrientId])
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals     Meal[]
+
+  @@index([userId])
+}
+
+model Meal {
+  id         String      @id @default(cuid())
+  name       String
+  date       String
+  mealPlanId String
+  mealPlan   MealPlan    @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  entries    MealEntry[]
+
+  @@index([mealPlanId, date])
+}
+
+model MealEntry {
+  id     String @id @default(cuid())
+  mealId String
+  foodId String
+  grams  Float
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Restrict)
+
+  @@index([mealId])
+  @@index([foodId])
+}
