@@ -44,7 +44,7 @@ export default function Home() {
             <span className="notice-icon" aria-hidden="true">✳</span>
             <div>
               <strong>We&apos;re building the foundation.</strong>
-              <p>Search USDA foods now. Meal planning is coming next.</p>
+              <p>Search USDA foods and start organizing your meals.</p>
             </div>
           </div>
         </div>

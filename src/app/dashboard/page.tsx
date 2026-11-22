@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { FoodSearch } from "@/app/components/food-search";
+import { MealPlanner } from "@/app/components/meal-planner";
 import { auth } from "@/lib/auth";
 
 export default async function DashboardPage() {
@@ -14,12 +15,13 @@ export default async function DashboardPage() {
       <Link href="/" className="back-link">← Back to NutriMetrics</Link>
       <section className="account-bar">
         <div>
-        <p className="eyebrow">YOUR ACCOUNT</p>
-        <h1>Welcome, {session.user.name}.</h1>
-        <p className="auth-description">Signed in as {session.user.email}.</p>
+          <p className="eyebrow">YOUR ACCOUNT</p>
+          <h1>Welcome, {session.user.name}.</h1>
+          <p className="auth-description">Signed in as {session.user.email}.</p>
         </div>
         <SignOutButton />
       </section>
+      <MealPlanner />
       <FoodSearch />
     </main>
   );

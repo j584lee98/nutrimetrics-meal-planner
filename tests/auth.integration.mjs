@@ -69,14 +69,15 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   }
   assert.ok(ready, `Server failed to start: ${output}`);
 
-  async function request(path, { body, cookie, redirect = "follow" } = {}) {
-    const headers = { origin: baseUrl };
-    if (body) headers["content-type"] = "application/json";
+  async function request(path, { body, cookie, redirect = "follow", method, origin = baseUrl } = {}) {
+    const headers = {};
+    if (origin !== null) headers.origin = origin;
+    if (body !== undefined) headers["content-type"] = "application/json";
     if (cookie) headers.cookie = cookie;
     return fetch(`${baseUrl}${path}`, {
-      method: body ? "POST" : "GET",
+      method: method ?? (body !== undefined ? "POST" : "GET"),
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       redirect,
     });
   }
@@ -120,6 +121,47 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const anonymous = await request("/dashboard", { redirect: "manual" });
   assert.equal(anonymous.status, 307);
   assert.equal(anonymous.headers.get("location"), "/sign-in");
+
+  const secondSignup = await request("/api/auth/sign-up/email", {
+    body: { name: "Second User", email: "second@example.com", password },
+  });
+  assert.equal(secondSignup.status, 200);
+  const secondCookie = cookieFrom(secondSignup);
+  assert.equal((await request("/api/meal-plans")).status, 401);
+  assert.equal((await request("/api/meal-plans", { body: { name: "Plan" } })).status, 401);
+  assert.equal((await request("/api/meal-plans", { cookie, origin: "https://evil.example", body: { name: "Plan" } })).status, 403);
+  assert.equal((await request("/api/meal-plans", { cookie, origin: null, body: { name: "Plan" } })).status, 403);
+  assert.equal((await request("/api/meal-plans", { cookie, body: { name: "   " } })).status, 400);
+  assert.equal((await request("/api/meal-plans", { cookie, body: { name: "a".repeat(101) } })).status, 400);
+  const createPlan = await request("/api/meal-plans", { cookie, body: { name: "  Week one  " } });
+  assert.equal(createPlan.status, 201);
+  const plan = await createPlan.json();
+  assert.equal(plan.name, "Week one");
+  assert.deepEqual(await (await request("/api/meal-plans", { cookie: secondCookie })).json(), []);
+  const mealsPath = `/api/meal-plans/${plan.id}/meals`;
+  assert.equal((await request(mealsPath, { cookie: secondCookie, body: { name: "Other", date: "2028-02-29" } })).status, 404);
+  assert.equal((await request(mealsPath, { cookie, body: { name: "Breakfast", date: "2027-02-29" } })).status, 400);
+  assert.equal((await request(mealsPath, { cookie, body: { name: "Breakfast", date: "2028-13-01" } })).status, 400);
+  assert.equal((await request(mealsPath, { cookie, body: { name: " ", date: "2028-02-29" } })).status, 400);
+  const createMeal = await request(mealsPath, { cookie, body: { name: "  Breakfast  ", date: "2028-02-29" } });
+  assert.equal(createMeal.status, 201);
+  const meal = await createMeal.json();
+  assert.equal(meal.name, "Breakfast");
+  assert.equal(meal.date, "2028-02-29");
+  const otherMealResponse = await request(mealsPath, { cookie, body: { name: "Dinner", date: "2028-02-28" } });
+  assert.equal(otherMealResponse.status, 201);
+  const otherMeal = await otherMealResponse.json();
+  const plansResponse = await request("/api/meal-plans", { cookie });
+  assert.equal(plansResponse.headers.get("cache-control"), "no-store");
+  const plans = await plansResponse.json();
+  assert.deepEqual(plans[0].meals.map((entry) => entry.id), [otherMeal.id, meal.id]);
+  assert.equal((await request(`/api/meals/${meal.id}`, { cookie: secondCookie, method: "DELETE" })).status, 404);
+  assert.equal((await request(`/api/meal-plans/${plan.id}`, { cookie: secondCookie, method: "DELETE" })).status, 404);
+  assert.ok(await prisma.meal.findUnique({ where: { id: meal.id } }));
+  assert.equal((await request(`/api/meals/${meal.id}`, { cookie, method: "DELETE" })).status, 204);
+  assert.equal((await request(`/api/meal-plans/${plan.id}`, { cookie, method: "DELETE" })).status, 204);
+  assert.equal(await prisma.meal.findUnique({ where: { id: otherMeal.id } }), null);
+  assert.deepEqual(await (await request("/api/meal-plans", { cookie })).json(), []);
 
   const duplicate = await request("/api/auth/sign-up/email", {
     body: { name: "Other", email: "test@example.com", password },
