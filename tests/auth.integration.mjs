@@ -24,6 +24,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
     DATABASE_URL: databaseUrl,
     BETTER_AUTH_URL: baseUrl,
     BETTER_AUTH_SECRET: randomBytes(32).toString("base64"),
+    USDA_API_KEY: "test-usda-key",
   };
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   let server;
@@ -45,7 +46,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   });
   assert.equal(migration.status, 0, `Migration failed: ${migration.stderr}`);
 
-  server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port)], {
+  server = spawn(process.execPath, ["--require", join(process.cwd(), "tests", "mock-usda.cjs"), "node_modules/next/dist/bin/next", "start", "-p", String(port)], {
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -96,6 +97,26 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const session = await request("/api/auth/get-session", { cookie });
   assert.equal((await session.json()).user.email, "test@example.com");
   assert.equal((await request("/dashboard", { cookie })).status, 200);
+  assert.equal((await request("/api/foods/search?q=apple")).status, 401);
+  assert.equal((await request("/api/foods/search?q=%20", { cookie })).status, 400);
+  assert.equal((await request("/api/foods/search?q=apple&page=0", { cookie })).status, 400);
+  const search = await request("/api/foods/search?q=apple", { cookie });
+  assert.equal(search.status, 200);
+  assert.equal(search.headers.get("cache-control"), "no-store");
+  const results = await search.json();
+  assert.equal(results.totalHits, 21);
+  assert.equal(results.foods[0].description, "Test apple");
+  assert.deepEqual(results.foods[0].nutrients, [
+    { id: 1003, name: "Protein", unit: "G", value: 0.26, derivation: null },
+    { id: 1004, name: "Fat", unit: "G", value: 0, derivation: "Calculated from a less than value per serving size measure" },
+  ]);
+  assert.ok(!JSON.stringify(results).includes("test-usda-key"));
+  const secondPage = await request("/api/foods/search?q=apple&page=2", { cookie });
+  assert.equal((await secondPage.json()).foods[0].description, "Test pear");
+  const noResults = await request("/api/foods/search?q=no%20results", { cookie });
+  assert.deepEqual((await noResults.json()).foods, []);
+  assert.equal((await request("/api/foods/search?q=rate%20limit", { cookie })).status, 429);
+  assert.equal((await request("/api/foods/search?q=bad%20response", { cookie })).status, 502);
   const anonymous = await request("/dashboard", { redirect: "manual" });
   assert.equal(anonymous.status, 307);
   assert.equal(anonymous.headers.get("location"), "/sign-in");
