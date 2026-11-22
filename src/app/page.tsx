@@ -1,3 +1,5 @@
+import { AuthNav } from "@/app/components/auth-nav";
+
 const features = [
   {
     number: "01",
@@ -27,7 +29,7 @@ export default function Home() {
           <span className="brand-mark" aria-hidden="true">N</span>
           <span>nutrimetrics<span className="brand-dot">.</span></span>
         </div>
-        <span className="status"><span aria-hidden="true" /> Foundation in progress</span>
+        <AuthNav />
       </header>
 
       <section className="hero">
@@ -42,7 +44,7 @@ export default function Home() {
             <span className="notice-icon" aria-hidden="true">✳</span>
             <div>
               <strong>We&apos;re building the foundation.</strong>
-              <p>Food search, accounts, and meal planning are coming next.</p>
+              <p>Food search and meal planning are coming next.</p>
             </div>
           </div>
         </div>
@@ -86,3 +88,4 @@ export default function Home() {
     </main>
   );
 }
+
