@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { requestJson } from "@/lib/client-request";
 import type { NutrientColumn } from "@/lib/meal-builder";
 
-export function NutrientOptions({ catalog, initial }: { catalog: NutrientColumn[]; initial: NutrientColumn[] }) {
+export function NutrientOptions({ catalog, initial, hiddenCount }: { catalog: NutrientColumn[]; initial: NutrientColumn[]; hiddenCount: number }) {
   const router = useRouter();
   const [selected, setSelected] = useState(initial.map((nutrient) => nutrient.id));
   const [saving, setSaving] = useState(false);
@@ -81,6 +81,8 @@ export function NutrientOptions({ catalog, initial }: { catalog: NutrientColumn[
   return (
     <form className="search-panel" onSubmit={save}>
       <p className="search-intro">Choose nutrients for all tables and arrange their display order.</p>
+      <p className="nutrient-note">Each option uses one USDA measure. Other forms are not substituted when that measure is unavailable. Vitamin E is alpha-tocopherol; vitamin A is RAE; folate is total folate.</p>
+      {hiddenCount > 0 && <p className="nutrient-note">Previously selected nutrients outside this list are hidden from tables. Saving options removes them from your selection, but not from your food data.</p>}
       <h2>Selected nutrients</h2>
       <p className="nutrient-note" id="reorder-instructions">Drag nutrients to reorder them, or focus one and use the up and down arrow keys.</p>
       <p className="visually-hidden" role="status" aria-live="polite">{announcement}</p>

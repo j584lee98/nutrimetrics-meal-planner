@@ -153,8 +153,12 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const secondCookie = cookieFrom(secondSignup);
   const options = await request("/options", { cookie });
   assert.equal(options.status, 200);
-  const optionsHtml = await options.text();
+  const optionsHtml = (await options.text()).replaceAll("<!-- -->", "");
   assert.match(optionsHtml, /Vitamin C/);
+  assert.match(optionsHtml, /Fiber \(g\)/);
+  assert.match(optionsHtml, /Saturated Fat \(g\)/);
+  assert.match(optionsHtml, /Vitamin E \(mg\)/);
+  assert.doesNotMatch(optionsHtml, /Fatty acids, total saturated|Fiber, total dietary|Vitamin E, added|Serine|Cryptoxanthin/);
   assert.match(optionsHtml, /href="\/options"/);
   assert.equal((await request("/api/options", { method: "PUT", body: { nutrientIds: [] } })).status, 401);
   assert.equal((await request("/api/options", { cookie, origin: "https://evil.example", method: "PUT", body: { nutrientIds: [] } })).status, 403);
@@ -194,7 +198,9 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   await prisma.nutrient.create({ data: { id: 99999, name: "Private nutrient", unit: "mg", foods: { create: { foodId: privateFood.id, per100Unit: 1 } } } });
   assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [99999] } })).status, 400);
   assert.doesNotMatch(await (await request("/options", { cookie })).text(), /Private nutrient/);
-  assert.match(await (await request("/options", { cookie: secondCookie })).text(), /Private nutrient/);
+  assert.doesNotMatch(await (await request("/options", { cookie: secondCookie })).text(), /Private nutrient/);
+  assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1242] } })).status, 400);
+  assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1227] } })).status, 400);
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, foodId: privateFood.id }] } })).status, 400);
   const createMeal = await request(mealsPath, { cookie, body: { name: "  Breakfast  ", entries: [entry] } });
   assert.equal(createMeal.status, 201);
@@ -259,6 +265,31 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.doesNotMatch(mealsHtml, /Your plans\./);
   assert.doesNotMatch(await (await request("/meals", { cookie: secondCookie })).text(), /Brunch|Dinner/);
   assert.doesNotMatch(await (await request("/plans", { cookie: secondCookie })).text(), /Renamed/);
+  const firstUser = await prisma.user.findUniqueOrThrow({ where: { email: "test@example.com" } });
+  const legacyPreferences = [
+    { id: 1079, name: "Fiber, total dietary", unit: "g" },
+    { id: 1258, name: "Fatty acids, total saturated", unit: "g" },
+    { id: 1109, name: "Vitamin E", unit: "mg" },
+    { id: 1106, name: "Vitamin A, RAE", unit: "µg" },
+    { id: 1242, name: "Vitamin E, added", unit: "mg" },
+    { id: 1227, name: "Serine", unit: "g" },
+  ];
+  await prisma.user.update({ where: { id: firstUser.id }, data: { nutrientPreferences: JSON.stringify(legacyPreferences) } });
+  const revisedOptions = await (await request("/options", { cookie })).text();
+  assert.match(revisedOptions, /Previously selected nutrients outside this list are hidden/);
+  assert.doesNotMatch(revisedOptions, /Vitamin E, added|Serine|Fatty acids, total saturated|Fiber, total dietary/);
+  const revisedMeals = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(revisedMeals, /<th scope="col">Fiber \(g\)<\/th><th scope="col">Saturated Fat \(g\)<\/th><th scope="col">Vitamin E \(mg\)<\/th><th scope="col">Vitamin A, RAE \(µg\)<\/th>/);
+  assert.match(revisedMeals, /<th scope="row">Test apple<\/th><td>2<\/td><td>whole apple<\/td><td>6<\/td><td>1.5<\/td><td>0.54<\/td><td>9<\/td>/);
+  assert.match(revisedMeals, /<th scope="row">Test drink<\/th><td>2<\/td><td>serving<\/td><td>—<\/td><td>—<\/td><td>—<\/td><td>—<\/td>/);
+  const revisedPlans = (await (await request("/plans", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(revisedPlans, /<th scope="row">Total<\/th><td>6 \(partial\)<\/td><td>1.5 \(partial\)<\/td><td>0.54 \(partial\)<\/td><td>9 \(partial\)<\/td>/);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: firstUser.id } })).nutrientPreferences, JSON.stringify(legacyPreferences));
+  const cleanedOptions = await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1079, 1258, 1109, 1106] } });
+  assert.deepEqual((await cleanedOptions.json()).nutrients.map(({ id, name }) => [id, name]),
+    [[1079, "Fiber"], [1258, "Saturated Fat"], [1109, "Vitamin E"], [1106, "Vitamin A, RAE"]]);
+  assert.doesNotMatch(await (await request("/options", { cookie })).text(), /Previously selected nutrients outside this list are hidden/);
+  assert.equal((await prisma.foodNutrient.findUniqueOrThrow({ where: { foodId_nutrientId: { foodId: apple.id, nutrientId: 1242 } } })).per100Unit, 9);
   const saveOptions = await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1087, 1003] } });
   assert.equal(saveOptions.status, 200);
   assert.equal(saveOptions.headers.get("cache-control"), "no-store");

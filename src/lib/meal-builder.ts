@@ -27,10 +27,10 @@ export type BuilderMeal = {
 };
 
 export const defaultNutrients = [
-  { id: 1008, name: "Energy", unit: "kcal" },
+  { id: 1008, name: "Calories", unit: "kcal" },
   { id: 1003, name: "Protein", unit: "g" },
-  { id: 1005, name: "Carbohydrate", unit: "g" },
-  { id: 1004, name: "Total fat", unit: "g" },
+  { id: 1005, name: "Carbohydrates", unit: "g" },
+  { id: 1004, name: "Total Fat", unit: "g" },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

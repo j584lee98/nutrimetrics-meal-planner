@@ -21,7 +21,14 @@ globalThis.fetch = async (input, init) => {
         { nutrient: { id: 1003, name: "Protein", unitName: "G" }, amount: id === 123 ? 2 : 1 },
         ...(id === 123 ? [{ nutrient: { id: 1004, name: "Fat", unitName: "G" }, amount: 0,
           foodNutrientDerivation: { description: "Calculated from a less than value" } },
-          { nutrient: { id: 1087, name: "Calcium", unitName: "MG" }, amount: 10 }] : []),
+          { nutrient: { id: 1087, name: "Calcium", unitName: "MG" }, amount: 10 },
+          { nutrient: { id: 1079, name: "Fiber, total dietary", unitName: "G" }, amount: 2 },
+          { nutrient: { id: 1258, name: "Fatty acids, total saturated", unitName: "G" }, amount: 0.5 },
+          { nutrient: { id: 1109, name: "Vitamin E (alpha-tocopherol)", unitName: "MG" }, amount: 0.18 },
+          { nutrient: { id: 1242, name: "Vitamin E, added", unitName: "MG" }, amount: 9 },
+          { nutrient: { id: 1106, name: "Vitamin A, RAE", unitName: "UG" }, amount: 3 },
+          { nutrient: { id: 1227, name: "Serine", unitName: "G" }, amount: 1 }] : []),
+        ...(id === 456 ? [{ nutrient: { id: 1104, name: "Vitamin A, IU", unitName: "IU" }, amount: 206 }] : []),
       ],
     });
   }

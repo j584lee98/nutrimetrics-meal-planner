@@ -3,12 +3,16 @@ import "server-only";
 import { db } from "@/lib/db";
 import { defaultNutrients, type NutrientColumn } from "@/lib/meal-builder";
 
-// FoodData Central nutrient IDs, names and units.
-const commonNutrients: NutrientColumn[] = [
+// One FoodData Central measure per commonly tracked nutrient; distinct forms are not interchangeable.
+export const nutrientCatalog: NutrientColumn[] = [
   ...defaultNutrients,
-  { id: 1079, name: "Fiber, total dietary", unit: "g" },
-  { id: 2000, name: "Sugars, total including NLEA", unit: "g" },
-  { id: 1258, name: "Fatty acids, total saturated", unit: "g" },
+  { id: 1079, name: "Fiber", unit: "g" },
+  { id: 2000, name: "Total Sugars", unit: "g" },
+  { id: 1235, name: "Added Sugars", unit: "g" },
+  { id: 1258, name: "Saturated Fat", unit: "g" },
+  { id: 1257, name: "Trans Fat", unit: "g" },
+  { id: 1292, name: "Monounsaturated Fat", unit: "g" },
+  { id: 1293, name: "Polyunsaturated Fat", unit: "g" },
   { id: 1253, name: "Cholesterol", unit: "mg" },
   { id: 1087, name: "Calcium", unit: "mg" },
   { id: 1089, name: "Iron", unit: "mg" },
@@ -17,8 +21,12 @@ const commonNutrients: NutrientColumn[] = [
   { id: 1092, name: "Potassium", unit: "mg" },
   { id: 1093, name: "Sodium", unit: "mg" },
   { id: 1095, name: "Zinc", unit: "mg" },
+  { id: 1096, name: "Chromium", unit: "µg" },
   { id: 1098, name: "Copper", unit: "mg" },
+  { id: 1099, name: "Fluoride", unit: "µg" },
+  { id: 1100, name: "Iodine", unit: "µg" },
   { id: 1101, name: "Manganese", unit: "mg" },
+  { id: 1102, name: "Molybdenum", unit: "µg" },
   { id: 1103, name: "Selenium", unit: "µg" },
   { id: 1106, name: "Vitamin A, RAE", unit: "µg" },
   { id: 1109, name: "Vitamin E", unit: "mg" },
@@ -29,11 +37,14 @@ const commonNutrients: NutrientColumn[] = [
   { id: 1167, name: "Niacin", unit: "mg" },
   { id: 1170, name: "Pantothenic acid", unit: "mg" },
   { id: 1175, name: "Vitamin B-6", unit: "mg" },
-  { id: 1177, name: "Folate, total", unit: "µg" },
+  { id: 1176, name: "Biotin", unit: "µg" },
+  { id: 1177, name: "Folate (total)", unit: "µg" },
   { id: 1178, name: "Vitamin B-12", unit: "µg" },
   { id: 1180, name: "Choline", unit: "mg" },
-  { id: 1185, name: "Vitamin K", unit: "µg" },
+  { id: 1185, name: "Vitamin K (K1)", unit: "µg" },
 ];
+
+const catalogById = new Map(nutrientCatalog.map((nutrient) => [nutrient.id, nutrient]));
 
 function parsePreferences(value: string | null): NutrientColumn[] {
   if (value === null) return defaultNutrients;
@@ -46,25 +57,13 @@ function parsePreferences(value: string | null): NutrientColumn[] {
   return parsed;
 }
 
-export async function getNutrientPreferences(userId: string): Promise<NutrientColumn[]> {
+export async function getNutrientPreferenceState(userId: string) {
   const user = await db.user.findUniqueOrThrow({ where: { id: userId }, select: { nutrientPreferences: true } });
-  return parsePreferences(user.nutrientPreferences);
+  const saved = parsePreferences(user.nutrientPreferences);
+  const columns = saved.map((nutrient) => catalogById.get(nutrient.id)).filter((nutrient): nutrient is NutrientColumn => nutrient !== undefined);
+  return { columns, hiddenCount: saved.length - columns.length };
 }
 
-export async function getNutrientCatalog(userId: string): Promise<NutrientColumn[]> {
-  const [stored, selected] = await Promise.all([
-    db.nutrient.findMany({
-      where: { OR: [
-        { foods: { some: { food: { OR: [{ ownerId: null }, { ownerId: userId }] } } } },
-        { overrides: { some: { userId } } },
-      ] },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, unit: true },
-    }),
-    getNutrientPreferences(userId),
-  ]);
-  const catalog = new Map(commonNutrients.map((nutrient) => [nutrient.id, nutrient]));
-  for (const nutrient of stored) if (!catalog.has(nutrient.id)) catalog.set(nutrient.id, nutrient);
-  for (const nutrient of selected) if (!catalog.has(nutrient.id)) catalog.set(nutrient.id, nutrient);
-  return [...catalog.values()];
+export async function getNutrientPreferences(userId: string): Promise<NutrientColumn[]> {
+  return (await getNutrientPreferenceState(userId)).columns;
 }

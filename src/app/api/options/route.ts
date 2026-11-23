@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { apiError, checkMutationOrigin, getUserId, isRecord, readJson } from "@/lib/meal-plan-api";
-import { getNutrientCatalog } from "@/lib/nutrient-preferences";
+import { nutrientCatalog } from "@/lib/nutrient-preferences";
 
 export async function PUT(request: Request) {
   const originError = checkMutationOrigin(request);
@@ -14,7 +14,7 @@ export async function PUT(request: Request) {
       new Set(input.nutrientIds).size !== input.nutrientIds.length) {
     return apiError("Invalid nutrient selection.", 400);
   }
-  const catalog = new Map((await getNutrientCatalog(userId)).map((nutrient) => [nutrient.id, nutrient]));
+  const catalog = new Map(nutrientCatalog.map((nutrient) => [nutrient.id, nutrient]));
   const columns = input.nutrientIds.map((id: number) => catalog.get(id));
   if (columns.some((column) => !column)) return apiError("A selected nutrient is unavailable.", 400);
   await db.user.update({ where: { id: userId }, data: { nutrientPreferences: JSON.stringify(columns) } });
