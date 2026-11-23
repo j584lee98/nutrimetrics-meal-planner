@@ -7,7 +7,7 @@ import { requestJson } from "@/lib/client-request";
 export function DeleteItemButton({ id, name, kind, planCount = 0 }: {
   id: string;
   name: string;
-  kind: "plan" | "meal";
+  kind: "plan" | "meal" | "food";
   planCount?: number;
 }) {
   const router = useRouter();
@@ -22,11 +22,12 @@ export function DeleteItemButton({ id, name, kind, planCount = 0 }: {
     }
     const confirmation = kind === "plan"
       ? `Delete "${name}"? Its meals will remain in your meal library.`
-      : `Delete "${name}" and its food entries? This cannot be undone.`;
+      : kind === "meal" ? `Delete "${name}" and its food entries? This cannot be undone.`
+      : `Delete "${name}"? This cannot be undone.`;
     if (!window.confirm(confirmation)) return;
     setPending(true);
     try {
-      await requestJson(`${kind === "plan" ? "/api/meal-plans" : "/api/meals"}/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await requestJson(`${kind === "plan" ? "/api/meal-plans" : kind === "meal" ? "/api/meals" : "/api/custom-foods"}/${encodeURIComponent(id)}`, { method: "DELETE" });
       router.refresh();
     } catch (cause) {
       console.error(`Could not delete ${kind}`, cause);

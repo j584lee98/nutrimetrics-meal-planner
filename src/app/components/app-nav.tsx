@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export function AppNav({ current }: { current?: "plans" | "meals" | "foods" | "options" }) {
+export function AppNav({ current }: { current?: "plans" | "meals" | "custom-foods" | "foods" | "options" }) {
   return (
     <header className="app-header">
       <Link href="/dashboard" className="brand app-brand">
@@ -10,6 +10,7 @@ export function AppNav({ current }: { current?: "plans" | "meals" | "foods" | "o
       <nav className="app-nav" aria-label="Main navigation">
         <Link href="/plans" aria-current={current === "plans" ? "page" : undefined}>Plans</Link>
         <Link href="/meals" aria-current={current === "meals" ? "page" : undefined}>Meals</Link>
+        <Link href="/custom-foods" aria-current={current === "custom-foods" ? "page" : undefined}>Custom foods</Link>
         <Link href="/foods" aria-current={current === "foods" ? "page" : undefined}>Lookup</Link>
         <Link href="/options" aria-current={current === "options" ? "page" : undefined}>Options</Link>
       </nav>

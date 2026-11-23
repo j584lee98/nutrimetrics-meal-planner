@@ -10,7 +10,7 @@ export const foodInclude = {
 type FoodWithNutrients = Prisma.FoodGetPayload<{ include: typeof foodInclude }>;
 
 export function toBuilderFood(food: FoodWithNutrients): BuilderFood {
-  if (food.nutrientBasis !== "g" && food.nutrientBasis !== "ml" && food.nutrientBasis !== "unknown") throw new Error("Invalid stored nutrient basis.");
+  if (food.nutrientBasis !== "g" && food.nutrientBasis !== "ml" && food.nutrientBasis !== "unit" && food.nutrientBasis !== "unknown") throw new Error("Invalid stored nutrient basis.");
   const parsed: unknown = JSON.parse(food.portionsJson);
   if (!Array.isArray(parsed)) throw new Error("Invalid stored food portions.");
   const portions: BuilderFood["portions"] = parsed.map((portion: unknown): BuilderFood["portions"][number] => {
@@ -28,6 +28,8 @@ export function toBuilderFood(food: FoodWithNutrients): BuilderFood {
     fdcId: food.fdcId,
     name: food.name,
     basis: food.nutrientBasis,
+    defaultAmount: food.defaultAmount,
+    defaultUnit: food.defaultUnit,
     portions,
     nutrients: food.nutrients.map(({ nutrient, per100Unit, derivation }) => ({
       id: nutrient.id,
@@ -51,7 +53,7 @@ export function toBuilderMeal(meal: MealWithFoods, userId: string): BuilderMeal 
     name: meal.name,
     entries: meal.entries.map((entry) => {
       if (entry.food.ownerId && entry.food.ownerId !== userId) throw new Error("Meal contains an inaccessible food.");
-      if (entry.basis !== "g" && entry.basis !== "ml") throw new Error("Meal contains an invalid nutrient basis.");
+      if (entry.basis !== "g" && entry.basis !== "ml" && entry.basis !== "unit") throw new Error("Meal contains an invalid nutrient basis.");
       return {
         key: entry.id, food: toBuilderFood(entry.food), quantity: entry.quantity,
         unitLabel: entry.unitLabel, basisPerUnit: entry.basisPerUnit, basis: entry.basis,

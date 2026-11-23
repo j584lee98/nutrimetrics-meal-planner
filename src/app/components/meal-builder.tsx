@@ -13,14 +13,14 @@ type DraftEntry = {
   quantity: string;
   unitLabel: string;
   basisPerUnit: string;
-  basis: "g" | "ml" | "";
+  basis: "g" | "ml" | "unit" | "";
   choice: string;
 };
 
 function draftFromEntry(entry: BuilderEntry): DraftEntry {
   const portionIndex = entry.food.portions.findIndex((portion) =>
     portion.basis === entry.basis && portion.label === entry.unitLabel && portion.amount === entry.basisPerUnit);
-  const choice = entry.unitLabel === entry.basis && entry.basisPerUnit === 1
+  const choice = entry.unitLabel === (entry.basis === "unit" ? entry.food.defaultUnit : entry.basis) && entry.basisPerUnit === 1
     ? "base" : portionIndex >= 0 ? `portion:${portionIndex}` : "custom";
   return { ...entry, quantity: String(entry.quantity), basisPerUnit: String(entry.basisPerUnit), choice };
 }
@@ -61,7 +61,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
     const equivalent = quantity > 0 && oldConversion > 0 ? quantity * oldConversion / amount : quantity;
     update(entry.key, {
       choice,
-      unitLabel: portion?.label ?? entry.basis,
+      unitLabel: portion?.label ?? (entry.basis === "unit" ? entry.food.defaultUnit ?? "" : entry.basis),
       basisPerUnit: String(amount),
       quantity: Number.isFinite(equivalent) && equivalent > 0 ? String(Number(equivalent.toPrecision(10))) : entry.quantity,
     });
@@ -70,7 +70,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
   function addFood(food: BuilderFood) {
     const basis = food.basis === "unknown" ? "" : food.basis;
     setEntries((current) => [...current, {
-      key: crypto.randomUUID(), food, quantity: "100", basis, unitLabel: basis,
+      key: crypto.randomUUID(), food, quantity: String(food.defaultAmount ?? 100), basis, unitLabel: food.defaultUnit ?? basis,
       basisPerUnit: "1", choice: "base",
     }]);
   }
@@ -116,7 +116,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
       <label className="builder-name">Meal name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="e.g. Breakfast bowl" /></label>
       <FoodPicker onAdd={addFood} initialFoodTypes={initialFoodTypes} />
-      <p className="nutrient-note">Values are estimates based on USDA data. A dash means unavailable; totals marked partial exclude unavailable values. Check USDA details for less-than values and unusual food bases.</p>
+      <p className="nutrient-note">Values are estimates based on USDA or custom data. A dash means unavailable; totals marked partial exclude unavailable values. Check USDA details for less-than values and unusual food bases.</p>
       {entries.length === 0 ? <p className="planner-empty">Search above to add foods to this meal.</p> : (
         <div className="table-scroll builder-table">
           <table>
@@ -144,14 +144,14 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
                       <label>Amount<input type="number" min="0.000001" step="any" value={entry.quantity} onChange={(event) => update(entry.key, { quantity: event.target.value })} required /></label>
                       <label>Unit
                         <select value={entry.choice} onChange={(event) => chooseUnit(entry, event.target.value)} disabled={!entry.basis}>
-                          <option value="base">{entry.basis || "Choose basis"}</option>
+                          <option value="base">{entry.basis === "unit" ? entry.food.defaultUnit : entry.basis || "Choose basis"}</option>
                           {entry.food.portions.map((portion, index) => portion.basis === entry.basis && <option key={index} value={`portion:${index}`}>{portion.label}</option>)}
                           <option value="custom">Custom unit</option>
                         </select>
                       </label>
                       {entry.choice === "custom" && <>
                         <label>Unit name<input value={entry.unitLabel} onChange={(event) => update(entry.key, { unitLabel: event.target.value })} placeholder="e.g. tbsp" maxLength={100} required /></label>
-                        <label>{entry.basis} per unit<input type="number" min="0.000001" step="any" value={entry.basisPerUnit} onChange={(event) => update(entry.key, { basisPerUnit: event.target.value })} required /></label>
+                        <label>{entry.basis === "unit" ? entry.food.defaultUnit : entry.basis} per unit<input type="number" min="0.000001" step="any" value={entry.basisPerUnit} onChange={(event) => update(entry.key, { basisPerUnit: event.target.value })} required /></label>
                       </>}
                     </div>
                   </td>

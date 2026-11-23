@@ -8,7 +8,7 @@ type EntryInput = {
   quantity: number;
   unitLabel: string;
   basisPerUnit: number;
-  basis: "g" | "ml";
+  basis: "g" | "ml" | "unit";
 };
 
 export function parseMealInput(body: unknown): { name: string; nameKey: string; entries: EntryInput[] } | string {
@@ -18,7 +18,7 @@ export function parseMealInput(body: unknown): { name: string; nameKey: string; 
   for (const entry of body.entries) {
     if (
       !isRecord(entry) || typeof entry.foodId !== "string" || entry.foodId.length < 1 || entry.foodId.length > 128 ||
-      !validName(entry.unitLabel) || (entry.basis !== "g" && entry.basis !== "ml") ||
+      !validName(entry.unitLabel) || (entry.basis !== "g" && entry.basis !== "ml" && entry.basis !== "unit") ||
       typeof entry.quantity !== "number" || !Number.isFinite(entry.quantity) || entry.quantity <= 0 ||
       typeof entry.basisPerUnit !== "number" || !Number.isFinite(entry.basisPerUnit) || entry.basisPerUnit <= 0 ||
       entry.quantity * entry.basisPerUnit > 100000000
@@ -44,7 +44,7 @@ export async function entriesAreAccessible(tx: Prisma.TransactionClient, userId:
   });
   return foods.length === foodIds.length && entries.every((entry) => {
     const food = foods.find((item) => item.id === entry.foodId);
-    return food && (food.nutrientBasis === "unknown" || food.nutrientBasis === entry.basis);
+    return food && (food.nutrientBasis === entry.basis || (food.nutrientBasis === "unknown" && entry.basis !== "unit"));
   });
 }
 

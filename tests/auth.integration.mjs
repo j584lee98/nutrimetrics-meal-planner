@@ -105,6 +105,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.doesNotMatch(dashboardHtml, /Explore foods and their reported nutrients/);
   assert.match(dashboardHtml, /href="\/plans"/);
   assert.match(dashboardHtml, /href="\/meals"/);
+  assert.match(dashboardHtml, /href="\/custom-foods"/);
   assert.match(dashboardHtml, /href="\/foods"/);
   const foodsPage = await request("/foods", { cookie });
   assert.equal(foodsPage.status, 200);
@@ -112,7 +113,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(foodsHtml, /Explore foods and their reported nutrients/);
   assert.doesNotMatch(foodsHtml, /Your plans\./);
   assert.match(foodsHtml, /href="\/dashboard"/);
-  for (const path of ["/plans", "/meals", "/options"]) {
+  for (const path of ["/plans", "/meals", "/custom-foods", "/custom-foods/new", "/options"]) {
     const response = await request(path, { redirect: "manual" });
     assert.equal(response.status, 307);
     assert.equal(response.headers.get("location"), "/sign-in");
@@ -229,6 +230,59 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const unknown = await (await request("/api/foods/import", { cookie, body: { fdcId: 789 } })).json();
   assert.equal(unknown.basis, "unknown");
   assert.equal((await request("/api/foods/import", { cookie, body: { fdcId: 999 } })).status, 404);
+  const customPath = "/api/custom-foods";
+  const customInput = { name: "Test custom bread", amount: 2, unit: "slice", nutrients: [{ id: 1003, value: 6 }, { id: 1004, value: 0 }] };
+  assert.equal((await request(customPath, { body: customInput })).status, 401);
+  assert.equal((await request(customPath, { cookie, origin: "https://evil.example", body: customInput })).status, 403);
+  for (const invalid of [
+    { ...customInput, amount: 0 },
+    { ...customInput, unit: " " },
+    { ...customInput, nutrients: [{ id: 1003, value: -1 }] },
+    { ...customInput, nutrients: [{ id: 1003, value: 1 }, { id: 1003, value: 2 }] },
+    { ...customInput, nutrients: [{ id: 99999, value: 1 }] },
+  ]) assert.equal((await request(customPath, { cookie, body: invalid })).status, 400);
+  const createdCustom = await request(customPath, { cookie, body: customInput });
+  assert.equal(createdCustom.status, 201);
+  const customFood = await createdCustom.json();
+  assert.equal(customFood.basis, "unit");
+  assert.equal(customFood.defaultAmount, 2);
+  assert.equal(customFood.defaultUnit, "slice");
+  assert.equal(customFood.nutrients.find((n) => n.id === 1003).value, 300);
+  assert.equal(customFood.nutrients.find((n) => n.id === 1004).value, 0);
+  assert.equal(customFood.nutrients.find((n) => n.id === 1005), undefined);
+  assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie })).json()).foods.map((food) => food.id), [customFood.id]);
+  assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie: secondCookie })).json()).foods, []);
+  assert.equal((await request(`/custom-foods/${customFood.id}/copy`, { cookie: secondCookie })).status, 404);
+  assert.equal((await request(`/api/custom-foods/${customFood.id}`, { cookie: secondCookie, method: "DELETE" })).status, 404);
+  const customEntry = { foodId: customFood.id, quantity: 4, unitLabel: "slice", basisPerUnit: 1, basis: "unit" };
+  assert.equal((await request(mealsPath, { cookie: secondCookie, body: { name: "Private custom", entries: [customEntry] } })).status, 400);
+  const customMealResponse = await request(mealsPath, { cookie, body: { name: "Custom meal", entries: [customEntry] } });
+  assert.equal(customMealResponse.status, 201);
+  const customMeal = await customMealResponse.json();
+  const customMealPage = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(customMealPage, /Test custom bread/);
+  assert.match(customMealPage, />12</);
+  const customPlanResponse = await request("/api/meal-plans", { cookie, body: { name: "Custom plan", mealIds: [customMeal.id] } });
+  assert.equal(customPlanResponse.status, 201);
+  const customPlan = await customPlanResponse.json();
+  const customPlanPage = (await (await request("/plans", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(customPlanPage, /Custom meal/);
+  assert.match(customPlanPage, />12</);
+  assert.equal((await request(`/api/meal-plans/${customPlan.id}`, { cookie, method: "DELETE" })).status, 204);
+  assert.equal((await request(`/api/custom-foods/${customFood.id}`, { cookie, method: "DELETE" })).status, 409);
+  const customCopyResponse = await request(customPath, { cookie, body: { ...customInput, name: "Modified bread", nutrients: [{ id: 1003, value: 8 }] } });
+  assert.equal(customCopyResponse.status, 201);
+  const customCopy = await customCopyResponse.json();
+  assert.notEqual(customCopy.id, customFood.id);
+  assert.equal((await prisma.foodNutrient.findUniqueOrThrow({ where: { foodId_nutrientId: { foodId: customFood.id, nutrientId: 1003 } } })).per100Unit, 300);
+  assert.equal((await request(`/api/custom-foods/${customCopy.id}`, { cookie, method: "DELETE" })).status, 204);
+  assert.equal((await request(`/api/meals/${customMeal.id}`, { cookie, method: "DELETE" })).status, 204);
+  assert.equal((await request(`/api/custom-foods/${customFood.id}`, { cookie, method: "DELETE" })).status, 204);
+  const metricFood = await (await request(customPath, { cookie, body: { ...customInput, name: "Metric food", amount: 50, unit: "G" } })).json();
+  assert.equal(metricFood.basis, "g");
+  assert.equal(metricFood.defaultUnit, "g");
+  assert.equal(metricFood.nutrients.find((n) => n.id === 1003).value, 12);
+  assert.equal((await request(`/api/custom-foods/${metricFood.id}`, { cookie, method: "DELETE" })).status, 204);
   const entry = { foodId: apple.id, quantity: 2, unitLabel: "whole apple", basisPerUnit: 150, basis: "g" };
   assert.equal((await request(mealsPath, { cookie, body: { name: " ", entries: [] } })).status, 400);
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, quantity: 0 }] } })).status, 400);

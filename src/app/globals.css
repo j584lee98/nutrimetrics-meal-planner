@@ -165,6 +165,10 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .nutrient-group legend { margin-bottom: 12px; color: var(--ink); font-size: 14px; font-weight: 700; }
 .nutrient-group label { display: flex; align-items: baseline; gap: 6px; margin-bottom: 10px; font-size: 12px; line-height: 1.4; }
 .nutrient-group input { flex-shrink: 0; }
+.custom-food-serving { display: flex; flex-wrap: wrap; gap: 16px; max-width: 500px; margin: 20px 0; }
+.custom-food-serving label, .custom-food-nutrients label { display: grid; flex: 1; gap: 6px; min-width: 140px; font-size: 13px; font-weight: 700; }
+.custom-food-serving input, .custom-food-nutrients input { width: 100%; min-width: 0; padding: 10px; border: 1px solid #cbd6c9; border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+.custom-food-serving input:focus-visible, .custom-food-nutrients input:focus-visible { outline: 3px solid #9db89b; outline-offset: 2px; }
 .food-type-options { margin-bottom: 20px; }
 .food-type-options-list { padding: 0; border: 0; }
 .food-type-options-list label { font-size: 13px; }
