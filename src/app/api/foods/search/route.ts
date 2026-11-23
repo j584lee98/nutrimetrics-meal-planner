@@ -22,11 +22,6 @@ export async function GET(request: Request) {
   if (dataType.length === 0) {
     return Response.json({ totalHits: 0, currentPage: page, totalPages: 0, foods: [] }, { headers: { "Cache-Control": "no-store" } });
   }
-  const words = query.toLowerCase().split(/\s+/);
-  const searchQuery = words
-    .map((word) => `+description:*${word.replace(/[+\-=!(){}\[\]^"~*?:\\/|&<>]/g, "\\$&")}*`)
-    .join(" ");
-
   const key = process.env.USDA_API_KEY?.trim();
   if (!key) {
     console.error("USDA_API_KEY is not configured.");
@@ -38,7 +33,7 @@ export async function GET(request: Request) {
     response = await fetch("https://api.nal.usda.gov/fdc/v1/foods/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Api-Key": key },
-      body: JSON.stringify({ query: searchQuery, pageSize: PAGE_SIZE, pageNumber: page, dataType }),
+      body: JSON.stringify({ query, pageSize: PAGE_SIZE, pageNumber: page, dataType }),
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
@@ -57,9 +52,6 @@ export async function GET(request: Request) {
 
   try {
     const result = parseFoodSearch(await response.json());
-    if (result.foods.some((food) => words.some((word) => !food.description.toLowerCase().includes(word)))) {
-      throw new Error("USDA returned a food whose description does not match the search.");
-    }
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch {
     console.error("USDA returned an invalid food search response.");
