@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { requestJson } from "@/lib/client-request";
 import type { NutrientColumn } from "@/lib/meal-builder";
 
-export function NutrientOptions({ catalog, initial, hiddenCount }: { catalog: NutrientColumn[]; initial: NutrientColumn[]; hiddenCount: number }) {
+export function NutrientOptions({ groups, initial, hiddenCount }: { groups: { macros: NutrientColumn[]; vitamins: NutrientColumn[]; minerals: NutrientColumn[] }; initial: NutrientColumn[]; hiddenCount: number }) {
   const router = useRouter();
   const [selected, setSelected] = useState(initial.map((nutrient) => nutrient.id));
   const [saving, setSaving] = useState(false);
@@ -15,7 +15,7 @@ export function NutrientOptions({ catalog, initial, hiddenCount }: { catalog: Nu
   const [drag, setDrag] = useState<{ id: number; offset: number; target: number } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const pointer = useRef<{ id: number; pointerId: number; startY: number; startScroll: number; active: boolean; target: number } | null>(null);
-  const byId = new Map(catalog.map((nutrient) => [nutrient.id, nutrient]));
+  const byId = new Map(Object.values(groups).flat().map((nutrient) => [nutrient.id, nutrient]));
 
   function move(id: number, target: number) {
     const index = selected.indexOf(id);
@@ -113,14 +113,19 @@ export function NutrientOptions({ catalog, initial, hiddenCount }: { catalog: Nu
         })}
       </ol>
       <h2>Available nutrients</h2>
-      <div className="column-options">
-        {catalog.map((nutrient) => <label key={nutrient.id}>
-          <input type="checkbox" checked={selected.includes(nutrient.id)} onChange={(event) => {
-            setSelected((current) => event.target.checked ? [...current, nutrient.id] : current.filter((id) => id !== nutrient.id));
-            setMessage("");
-          }} />
-          {nutrient.name} ({nutrient.unit})
-        </label>)}
+      <div className="nutrient-groups">
+        {([["Macros", groups.macros], ["Vitamins", groups.vitamins], ["Minerals", groups.minerals]] as const).map(([name, nutrients]) => (
+          <fieldset className="nutrient-group" key={name}>
+            <legend>{name}</legend>
+            {nutrients.map((nutrient) => <label key={nutrient.id}>
+              <input type="checkbox" checked={selected.includes(nutrient.id)} onChange={(event) => {
+                setSelected((current) => event.target.checked ? [...current, nutrient.id] : current.filter((id) => id !== nutrient.id));
+                setMessage("");
+              }} />
+              {nutrient.name} ({nutrient.unit})
+            </label>)}
+          </fieldset>
+        ))}
       </div>
       {error && <p className="form-error search-message" role="alert">{error}</p>}
       {message && <p className="search-message" role="status">{message}</p>}

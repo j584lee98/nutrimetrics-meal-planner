@@ -4,7 +4,7 @@ import { AppNav } from "@/app/components/app-nav";
 import { NutrientOptions } from "@/app/components/nutrient-options";
 import { FoodTypeOptions } from "@/app/components/food-type-filter";
 import { auth } from "@/lib/auth";
-import { getNutrientPreferenceState, nutrientCatalog } from "@/lib/nutrient-preferences";
+import { getNutrientPreferenceState, nutrientGroups } from "@/lib/nutrient-preferences";
 import { getFoodTypePreferences } from "@/lib/food-type-preferences";
 
 export default async function OptionsPage() {
@@ -18,6 +18,6 @@ export default async function OptionsPage() {
     <AppNav current="options" />
     <div className="lookup-heading"><h1>Options</h1></div>
     <FoodTypeOptions initial={foodTypes} />
-    <NutrientOptions catalog={nutrientCatalog} initial={columns} hiddenCount={hiddenCount} />
+    <NutrientOptions groups={nutrientGroups} initial={columns} hiddenCount={hiddenCount} />
   </main>;
 }

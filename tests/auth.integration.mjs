@@ -193,6 +193,12 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(optionsHtml, /Fiber \(g\)/);
   assert.match(optionsHtml, /Saturated Fat \(g\)/);
   assert.match(optionsHtml, /Vitamin E \(mg\)/);
+  const groups = [...optionsHtml.matchAll(/<fieldset class="nutrient-group"><legend>([^<]+)<\/legend>(.*?)<\/fieldset>/g)];
+  assert.deepEqual(groups.map((group) => group[1]), ["Macros", "Vitamins", "Minerals"]);
+  assert.match(groups[0][2], /Protein \(g\)/);
+  assert.match(groups[0][2], /Fiber \(g\)/);
+  assert.match(groups[1][2], /Vitamin C \(mg\)/);
+  assert.match(groups[2][2], /Calcium \(mg\)/);
   assert.doesNotMatch(optionsHtml, /Fatty acids, total saturated|Fiber, total dietary|Vitamin E, added|Serine|Cryptoxanthin/);
   assert.match(optionsHtml, /href="\/options"/);
   assert.equal((await request("/api/options", { method: "PUT", body: { nutrientIds: [] } })).status, 401);
