@@ -112,7 +112,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(foodsHtml, /Explore foods and their reported nutrients/);
   assert.doesNotMatch(foodsHtml, /Your plans\./);
   assert.match(foodsHtml, /href="\/dashboard"/);
-  for (const path of ["/plans", "/meals"]) {
+  for (const path of ["/plans", "/meals", "/options"]) {
     const response = await request(path, { redirect: "manual" });
     assert.equal(response.status, 307);
     assert.equal(response.headers.get("location"), "/sign-in");
@@ -151,6 +151,16 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   });
   assert.equal(secondSignup.status, 200);
   const secondCookie = cookieFrom(secondSignup);
+  const options = await request("/options", { cookie });
+  assert.equal(options.status, 200);
+  const optionsHtml = await options.text();
+  assert.match(optionsHtml, /Vitamin C/);
+  assert.match(optionsHtml, /href="\/options"/);
+  assert.equal((await request("/api/options", { method: "PUT", body: { nutrientIds: [] } })).status, 401);
+  assert.equal((await request("/api/options", { cookie, origin: "https://evil.example", method: "PUT", body: { nutrientIds: [] } })).status, 403);
+  for (const nutrientIds of [[1003, 1003], [999999], ["1003"], [0]]) {
+    assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds } })).status, 400);
+  }
   assert.equal((await request("/api/meal-plans")).status, 401);
   assert.equal((await request("/api/meal-plans", { body: { name: "Plan" } })).status, 401);
   assert.equal((await request("/api/meal-plans", { cookie, origin: "https://evil.example", body: { name: "Plan" } })).status, 403);
@@ -181,6 +191,10 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, basis: "ml" }] } })).status, 400);
   const secondUser = await prisma.user.findUniqueOrThrow({ where: { email: "second@example.com" } });
   const privateFood = await prisma.food.create({ data: { name: "Private", ownerId: secondUser.id } });
+  await prisma.nutrient.create({ data: { id: 99999, name: "Private nutrient", unit: "mg", foods: { create: { foodId: privateFood.id, per100Unit: 1 } } } });
+  assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [99999] } })).status, 400);
+  assert.doesNotMatch(await (await request("/options", { cookie })).text(), /Private nutrient/);
+  assert.match(await (await request("/options", { cookie: secondCookie })).text(), /Private nutrient/);
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, foodId: privateFood.id }] } })).status, 400);
   const createMeal = await request(mealsPath, { cookie, body: { name: "  Breakfast  ", entries: [entry] } });
   assert.equal(createMeal.status, 201);
@@ -231,7 +245,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(plansHtml, /<th scope="row">Dinner<\/th><td>—<\/td><td>6<\/td><td>—<\/td><td>0<\/td>/);
   assert.match(plansHtml, /<th scope="row">Brunch<\/th><td>—<\/td><td>5<\/td><td>—<\/td><td>—<\/td>/);
   assert.match(plansHtml, /<th scope="row">Total<\/th><td>—<\/td><td>11<\/td><td>—<\/td><td>0 \(partial\)<\/td>/);
-  assert.match(plansHtml, /Calcium \(MG\)/);
+  assert.doesNotMatch(plansHtml, /Choose nutrient columns/);
   assert.doesNotMatch(plansHtml, /Your meals\./);
   const mealsList = await request("/meals", { cookie });
   assert.equal(mealsList.status, 200);
@@ -243,6 +257,27 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.doesNotMatch(mealsHtml, /Your plans\./);
   assert.doesNotMatch(await (await request("/meals", { cookie: secondCookie })).text(), /Brunch|Dinner/);
   assert.doesNotMatch(await (await request("/plans", { cookie: secondCookie })).text(), /Renamed/);
+  const saveOptions = await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1087, 1003] } });
+  assert.equal(saveOptions.status, 200);
+  assert.equal(saveOptions.headers.get("cache-control"), "no-store");
+  assert.deepEqual((await saveOptions.json()).nutrients.map((item) => item.id), [1087, 1003]);
+  const selectedPlans = (await (await request("/plans", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(selectedPlans, /<th scope="col">Calcium \(mg\)<\/th><th scope="col">Protein \(g\)<\/th>/);
+  assert.match(selectedPlans, /<th scope="row">Brunch<\/th><td>—<\/td><td>5<\/td>/);
+  const selectedMeals = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(selectedMeals, /<th scope="row">Test apple<\/th><td>2 apple<\/td><td>30<\/td><td>6<\/td>/);
+  for (const path of ["/meals/new", `/meals/${meal.id}/edit`, "/plans/new", `/plans/${plan.id}/edit`, "/foods"]) {
+    const html = await (await request(path, { cookie })).text();
+    assert.match(html, /Calcium/);
+    assert.doesNotMatch(html, /Choose nutrient columns/);
+  }
+  const secondOptions = await prisma.user.findUniqueOrThrow({ where: { id: secondUser.id } });
+  assert.equal(secondOptions.nutrientPreferences, null);
+  assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [] } })).status, 200);
+  const emptyPlans = (await (await request("/plans", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(emptyPlans, /<th scope="col">Meal<\/th><\/tr>/);
+  assert.match(await (await request("/options", { cookie })).text(), /No nutrients selected/);
+  assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1008, 1003, 1005, 1004] } })).status, 200);
   const plansResponse = await request("/api/meal-plans", { cookie });
   assert.equal(plansResponse.headers.get("cache-control"), "no-store");
   const plans = await plansResponse.json();
@@ -343,6 +378,7 @@ test("authentication migration preserves existing records", { timeout: 60000 }, 
 
   runPrisma(["migrate", "deploy"]);
   assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "old-user" } })).passwordHash, "old-hash");
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "old-user" } })).nutrientPreferences, null);
   assert.equal((await prisma.session.findUniqueOrThrow({ where: { id: "old-session" } })).token, "old-token-hash");
   assert.equal((await prisma.food.findUniqueOrThrow({ where: { id: "old-food" } })).ownerId, "old-user");
   assert.equal((await prisma.mealPlan.findUniqueOrThrow({ where: { id: "old-plan" } })).userId, "old-user");

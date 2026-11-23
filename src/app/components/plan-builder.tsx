@@ -1,34 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { requestJson } from "@/lib/client-request";
-import { defaultNutrients, type BuilderMeal } from "@/lib/meal-builder";
+import { type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 import { displayTotal, mealTotal, planTotal } from "@/lib/nutrition-totals";
 
-export function PlanBuilder({ meals, plan }: {
+export function PlanBuilder({ meals, plan, columns }: {
   meals: BuilderMeal[];
   plan?: { id: string; name: string; mealIds: string[] };
+  columns: NutrientColumn[];
 }) {
   const router = useRouter();
   const [name, setName] = useState(plan?.name ?? "");
   const [mealIds, setMealIds] = useState<string[]>(plan?.mealIds ?? []);
-  const [selected, setSelected] = useState(defaultNutrients.map((nutrient) => nutrient.id));
   const [choice, setChoice] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const chosen = mealIds.map((id) => meals.find((meal) => meal.id === id)).filter((meal): meal is BuilderMeal => !!meal);
-  const nutrients = useMemo(() => {
-    const all = new Map(defaultNutrients.map((nutrient) => [nutrient.id, nutrient]));
-    for (const meal of meals.filter((item) => mealIds.includes(item.id))) {
-      for (const entry of meal.entries) for (const nutrient of entry.food.nutrients) {
-        all.set(nutrient.id, { id: nutrient.id, name: nutrient.name, unit: nutrient.unit });
-      }
-    }
-    return [...all.values()];
-  }, [meals, mealIds]);
-  const columns = nutrients.filter((nutrient) => selected.includes(nutrient.id));
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,16 +62,6 @@ export function PlanBuilder({ meals, plan }: {
         <p className="nutrient-note">Need a meal? <Link href="/meals/new" target="_blank" rel="noopener noreferrer">Build one in a new tab</Link>, then refresh the meal list here.</p>
         <button type="button" className="button button-secondary button-small" onClick={() => router.refresh()}>Refresh meal list</button>
       </div>
-      <details className="column-picker">
-        <summary>Choose nutrient columns</summary>
-        <div className="column-options">
-          {nutrients.map((nutrient) => <label key={nutrient.id}>
-            <input type="checkbox" checked={selected.includes(nutrient.id)} onChange={(event) =>
-              setSelected((current) => event.target.checked ? [...current, nutrient.id] : current.filter((id) => id !== nutrient.id))} />
-            {nutrient.name} ({nutrient.unit})
-          </label>)}
-        </div>
-      </details>
       <p className="nutrient-note">Values are estimates. A dash means unavailable; partial totals exclude missing values. Meal changes affect all plans using them.</p>
       {chosen.length === 0 ? <p className="planner-empty">Add at least one meal to your plan.</p> : (
         <div className="table-scroll builder-table">

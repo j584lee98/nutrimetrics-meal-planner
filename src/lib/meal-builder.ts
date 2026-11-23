@@ -1,5 +1,7 @@
 export type NutrientBasis = "g" | "ml" | "unknown";
 
+export type NutrientColumn = { id: number; name: string; unit: string };
+
 export type BuilderFood = {
   id: string;
   fdcId: number | null;

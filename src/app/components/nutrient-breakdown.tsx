@@ -1,41 +1,16 @@
-"use client";
-
-import { useState } from "react";
-import { defaultNutrients, type BuilderMeal } from "@/lib/meal-builder";
+import { type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 import { displayTotal, entryValue, mealTotal, planTotal } from "@/lib/nutrition-totals";
 
-export function NutrientBreakdown(props: { kind: "meal"; meal: BuilderMeal } | { kind: "plan"; name: string; meals: BuilderMeal[] }) {
+export function NutrientBreakdown(props: ({ kind: "meal"; meal: BuilderMeal } | { kind: "plan"; name: string; meals: BuilderMeal[] }) & { columns: NutrientColumn[] }) {
   const meals = props.kind === "meal" ? [props.meal] : props.meals;
   const name = props.kind === "meal" ? props.meal.name : props.name;
-  const [selected, setSelected] = useState(() => defaultNutrients.map((nutrient) => nutrient.id));
-  const nutrients = new Map(defaultNutrients.map((nutrient) => [nutrient.id, nutrient]));
-  for (const meal of meals) {
-    for (const entry of meal.entries) {
-      for (const nutrient of entry.food.nutrients) {
-        nutrients.set(nutrient.id, { id: nutrient.id, name: nutrient.name, unit: nutrient.unit });
-      }
-    }
-  }
-  const columns = [...nutrients.values()].filter((nutrient) => selected.includes(nutrient.id));
+  const columns = props.columns;
   if (props.kind === "meal" ? props.meal.entries.length === 0 : props.meals.length === 0) {
     return <p className="planner-empty">{props.kind === "meal" ? "No foods in this meal." : "No meals in this plan."}</p>;
   }
 
   return (
     <div className="nutrient-breakdown">
-      <details className="column-picker">
-        <summary>Choose nutrient columns</summary>
-        <p className="nutrient-note">Column choices apply to this table until you leave or reload the page.</p>
-        <div className="column-options">
-          {[...nutrients.values()].map((nutrient) => (
-            <label key={nutrient.id}>
-              <input type="checkbox" checked={selected.includes(nutrient.id)} onChange={(event) =>
-                setSelected((current) => event.target.checked ? [...current, nutrient.id] : current.filter((id) => id !== nutrient.id))} />
-              {nutrient.name} ({nutrient.unit})
-            </label>
-          ))}
-        </div>
-      </details>
       <div className="table-scroll nutrient-table" role="region" aria-label={`${name} nutrient table`} tabIndex={0}>
         <table>
           <caption className="visually-hidden">{name} nutrient breakdown</caption>

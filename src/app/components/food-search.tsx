@@ -2,8 +2,9 @@
 
 import { useState, type FormEvent } from "react";
 import type { FoodSearchResults } from "@/lib/food-search";
+import type { NutrientColumn } from "@/lib/meal-builder";
 
-export function FoodSearch() {
+export function FoodSearch({ columns }: { columns: NutrientColumn[] }) {
   const [query, setQuery] = useState("");
   const [searchedQuery, setSearchedQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResults | null>(null);
@@ -76,16 +77,17 @@ export function FoodSearch() {
                   <details>
                     <summary>View reported nutrients</summary>
                     <p className="nutrient-note">Values are reported per 100 g or 100 mL, depending on the food. Check the USDA details for the applicable basis. Some amounts are calculated from label values or less-than values. Missing nutrients are not necessarily zero.</p>
-                    {food.nutrients.length === 0 ? (
-                      <p className="nutrient-note">No nutrient values were returned for this food.</p>
+                    {columns.length === 0 ? (
+                      <p className="nutrient-note">No nutrients selected in Options.</p>
                     ) : (
                       <div className="table-scroll">
                         <table>
                           <thead><tr><th scope="col">Nutrient</th><th scope="col">Amount</th><th scope="col">USDA derivation</th></tr></thead>
                           <tbody>
-                            {food.nutrients.map((nutrient, index) => (
-                              <tr key={`${nutrient.id}-${index}`}><th scope="row">{nutrient.name}</th><td>{nutrient.value.toLocaleString(undefined, { maximumSignificantDigits: 8 })} {nutrient.unit}</td><td>{nutrient.derivation ?? "Not provided"}</td></tr>
-                            ))}
+                            {columns.map((column) => {
+                              const nutrient = food.nutrients.find((item) => item.id === column.id);
+                              return <tr key={column.id}><th scope="row">{column.name}</th><td>{nutrient ? `${nutrient.value.toLocaleString(undefined, { maximumSignificantDigits: 8 })} ${nutrient.unit}` : "—"}</td><td>{nutrient ? nutrient.derivation ?? "Not provided" : "—"}</td></tr>;
+                            })}
                           </tbody>
                         </table>
                       </div>

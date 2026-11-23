@@ -8,10 +8,12 @@ import { NutrientBreakdown } from "@/app/components/nutrient-breakdown";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { mealInclude, toBuilderMeal } from "@/lib/builder-food";
+import { getNutrientPreferences } from "@/lib/nutrient-preferences";
 
 export default async function PlansPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
+  const columns = await getNutrientPreferences(session.user.id);
   const plans = await db.mealPlan.findMany({
     where: { userId: session.user.id },
     include: { meals: { include: { meal: { include: mealInclude } }, orderBy: [{ position: "asc" }, { mealId: "asc" }] } },
@@ -35,7 +37,7 @@ export default async function PlansPage() {
               <DeleteItemButton id={plan.id} name={plan.name} kind="plan" />
             </div>
             <MacroSummary meals={meals} />
-            <NutrientBreakdown kind="plan" name={plan.name} meals={meals} />
+            <NutrientBreakdown kind="plan" name={plan.name} meals={meals} columns={columns} />
             <Link className="button button-secondary button-small" href={`/plans/${encodeURIComponent(plan.id)}/edit`}>Edit plan<span className="visually-hidden"> {plan.name}</span></Link>
           </article>
           );

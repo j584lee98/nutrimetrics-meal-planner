@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FoodPicker } from "@/app/components/food-picker";
 import { requestJson } from "@/lib/client-request";
-import { defaultNutrients, type BuilderEntry, type BuilderFood, type BuilderMeal } from "@/lib/meal-builder";
+import { type BuilderEntry, type BuilderFood, type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 
 type DraftEntry = {
   key: string;
@@ -37,23 +37,12 @@ function format(value: number) {
   return value.toLocaleString(undefined, { maximumSignificantDigits: 6 });
 }
 
-export function MealBuilder({ meal }: { meal?: BuilderMeal }) {
+export function MealBuilder({ meal, columns }: { meal?: BuilderMeal; columns: NutrientColumn[] }) {
   const router = useRouter();
   const [name, setName] = useState(meal?.name ?? "");
   const [entries, setEntries] = useState<DraftEntry[]>(() => meal?.entries.map(draftFromEntry) ?? []);
-  const [selected, setSelected] = useState<number[]>(defaultNutrients.map((nutrient) => nutrient.id));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const nutrients = useMemo(() => {
-    const all = new Map(defaultNutrients.map((nutrient) => [nutrient.id, nutrient]));
-    for (const entry of entries) {
-      for (const nutrient of entry.food.nutrients) {
-        all.set(nutrient.id, { id: nutrient.id, name: nutrient.name, unit: nutrient.unit });
-      }
-    }
-    return [...all.values()];
-  }, [entries]);
-  const columns = nutrients.filter((nutrient) => selected.includes(nutrient.id));
 
   function update(key: string, change: Partial<DraftEntry>) {
     setEntries((current) => current.map((entry) => entry.key === key ? { ...entry, ...change } : entry));
@@ -126,18 +115,6 @@ export function MealBuilder({ meal }: { meal?: BuilderMeal }) {
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
       <label className="builder-name">Meal name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="e.g. Breakfast bowl" /></label>
       <FoodPicker onAdd={addFood} />
-      <details className="column-picker">
-        <summary>Choose nutrient columns</summary>
-        <div className="column-options">
-          {nutrients.map((nutrient) => (
-            <label key={nutrient.id}>
-              <input type="checkbox" checked={selected.includes(nutrient.id)} onChange={(event) =>
-                setSelected((current) => event.target.checked ? [...current, nutrient.id] : current.filter((id) => id !== nutrient.id))} />
-              {nutrient.name} ({nutrient.unit})
-            </label>
-          ))}
-        </div>
-      </details>
       <p className="nutrient-note">Values are estimates based on USDA data. A dash means unavailable; totals marked partial exclude unavailable values. Check USDA details for less-than values and unusual food bases.</p>
       {entries.length === 0 ? <p className="planner-empty">Search above to add foods to this meal.</p> : (
         <div className="table-scroll builder-table">

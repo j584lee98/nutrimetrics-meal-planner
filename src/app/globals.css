@@ -146,12 +146,20 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .food-suggestions button span, .food-suggestions p { color: var(--muted); font-size: 12px; }
 .food-suggestions p { padding: 12px; margin: 0; }
 .food-picker .form-error, .food-picker .field-hint { margin: 8px 0; }
-.column-picker { margin: 30px 0 16px; }
-.column-picker summary { color: var(--green); font-size: 14px; font-weight: 700; cursor: pointer; }
 .column-options { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 14px; }
 .column-options label { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.selected-nutrients { display: grid; gap: 8px; max-width: 500px; margin: 16px 0 28px; padding: 0; list-style: none; }
+.selected-nutrients li { position: relative; }
+.selected-nutrients li[data-drop]::after { position: absolute; right: 0; left: 0; height: 3px; border-radius: 2px; background: var(--green); content: ""; }
+.selected-nutrients li[data-drop="before"]::after { top: -5px; }
+.selected-nutrients li[data-drop="after"]::after { bottom: -5px; }
+.selected-nutrients li.is-dragging { z-index: 1; }
+.nutrient-drag { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 15px; border: 1px solid #d5e1d3; border-radius: 8px; background: #f5f8f2; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; text-align: left; cursor: grab; touch-action: none; user-select: none; }
+.nutrient-drag:hover { background: #eaf1e7; }
+.nutrient-drag:focus-visible { outline: 3px solid #9db89b; outline-offset: 2px; }
+.is-dragging .nutrient-drag { background: #e6eee3; box-shadow: 0 6px 16px #263d3226; cursor: grabbing; }
+.nutrient-drag-grip { color: #788f79; font-size: 20px; line-height: 1; }
 .nutrient-breakdown { margin: 20px 0; min-width: 0; }
-.nutrient-breakdown .column-picker { margin: 0 0 14px; }
 .nutrient-table { max-width: 100%; }
 .nutrient-table:focus-visible { outline: 3px solid #9db89b; outline-offset: 2px; }
 .nutrient-table table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
