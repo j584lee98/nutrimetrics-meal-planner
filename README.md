@@ -26,13 +26,15 @@ This is intended for local development. Email verification, password recovery, a
 
 ## Food search
 
-Sign in and search from your account page to browse USDA FoodData Central results. Expand a result to see the nutrients returned by USDA and follow its USDA link to check details. Values are on a 100-unit basis; branded products may use 100 g or 100 mL, so check the source before comparing values. Some amounts are calculated from label values or less-than values; inspect the USDA derivation where provided. Missing nutrients do not mean zero. USDA requests are made on the server and are subject to [USDA rate limits](https://fdc.nal.usda.gov/api-guide/). Tests use a mock USDA response and never use your API key.
+Sign in and select **Lookup** in the navigation to browse USDA FoodData Central results. Expand a result to see the nutrients returned by USDA and follow its USDA link to check details. Values are on a 100-unit basis; branded products may use 100 g or 100 mL, so check the source before comparing values. Some amounts are calculated from label values or less-than values; inspect the USDA derivation where provided. Missing nutrients do not mean zero. USDA requests are made on the server and are subject to [USDA rate limits](https://fdc.nal.usda.gov/api-guide/). Tests use a mock USDA response and never use your API key.
 
 ## Meal plans
 
-On the account page, create a plan and select **Build a meal**. Give the meal a name unique across your plans, search for foods using space-separated words, and select results to add them. Choose nutrient columns and adjust quantities using grams, milliliters, available USDA portions, or a custom unit with its equivalent in the food's nutrient basis. When the basis is unknown, check the USDA details and choose 100 g or 100 mL before saving. Totals marked partial exclude foods without a value for that nutrient; a dash means unavailable. Save, then open the meal from the account page to edit it. Meals have no dates.
+On the **Meals** page, create and edit meals in your meal library. Give each meal a unique name, search for foods using space-separated words, and select results to add them. Choose nutrient columns and adjust quantities using grams, milliliters, available USDA portions, or a custom unit with its equivalent in the food's nutrient basis. When the basis is unknown, check the USDA details and choose 100 g or 100 mL before saving. Meals have no dates.
 
-Plans and meals are private to the signed-in user and saved in SQLite. Imported USDA foods are shared snapshots and are not automatically refreshed. Deleting a plan also deletes its meals and their food entries; deleting a meal deletes its food entries. `BETTER_AUTH_URL` must match the browser's app origin for changes to be accepted.
+On the **Plans** page, create or edit a plan in the plan builder, adding at least one meal from your library. Both lists show calories, carbs, protein, and fat; the plan builder also shows nutrients for each meal and plan totals, with configurable columns. If you create a meal in the new tab while building a plan, refresh the meal list in the builder. Meals are reusable: editing one changes every plan containing it. Remove a meal from every plan before deleting it. Deleting a plan leaves its meals in the library. Existing empty plans are preserved but need at least one meal to be saved again. Totals marked partial exclude unavailable values; a dash means no value was available.
+
+Plans and meals are private to the signed-in user and saved in SQLite. Imported USDA foods are shared snapshots and are not automatically refreshed. `BETTER_AUTH_URL` must match the browser's app origin for changes to be accepted.
 
 ## Structure
 

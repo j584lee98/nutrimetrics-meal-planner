@@ -1,9 +1,7 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { AppNav } from "@/app/components/app-nav";
 import { SignOutButton } from "@/app/components/sign-out-button";
-import { FoodSearch } from "@/app/components/food-search";
-import { MealPlanner } from "@/app/components/meal-planner";
 import { auth } from "@/lib/auth";
 
 export default async function DashboardPage() {
@@ -12,7 +10,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="auth-page">
-      <Link href="/" className="back-link">← Back to NutriMetrics</Link>
+      <AppNav />
       <section className="account-bar">
         <div>
           <p className="eyebrow">YOUR ACCOUNT</p>
@@ -21,8 +19,6 @@ export default async function DashboardPage() {
         </div>
         <SignOutButton />
       </section>
-      <MealPlanner />
-      <FoodSearch />
     </main>
   );
 }

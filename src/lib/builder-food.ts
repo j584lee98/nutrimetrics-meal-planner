@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
-import type { BuilderFood } from "@/lib/meal-builder";
+import type { BuilderFood, BuilderMeal } from "@/lib/meal-builder";
 
 export const foodInclude = {
   nutrients: { include: { nutrient: true } },
@@ -36,5 +36,26 @@ export function toBuilderFood(food: FoodWithNutrients): BuilderFood {
       value: per100Unit,
       derivation,
     })),
+  };
+}
+
+export const mealInclude = {
+  entries: { include: { food: { include: foodInclude } }, orderBy: [{ position: "asc" }, { id: "asc" }] },
+} satisfies Prisma.MealInclude;
+
+type MealWithFoods = Prisma.MealGetPayload<{ include: typeof mealInclude }>;
+
+export function toBuilderMeal(meal: MealWithFoods, userId: string): BuilderMeal {
+  return {
+    id: meal.id,
+    name: meal.name,
+    entries: meal.entries.map((entry) => {
+      if (entry.food.ownerId && entry.food.ownerId !== userId) throw new Error("Meal contains an inaccessible food.");
+      if (entry.basis !== "g" && entry.basis !== "ml") throw new Error("Meal contains an invalid nutrient basis.");
+      return {
+        key: entry.id, food: toBuilderFood(entry.food), quantity: entry.quantity,
+        unitLabel: entry.unitLabel, basisPerUnit: entry.basisPerUnit, basis: entry.basis,
+      };
+    }),
   };
 }

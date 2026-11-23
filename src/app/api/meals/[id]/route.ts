@@ -43,7 +43,14 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   if (!userId) return apiError("Sign in to delete a meal.", 401);
 
   const { id } = await params;
-  const result = await db.meal.deleteMany({ where: { id, mealPlan: { userId } } });
-  if (!result.count) return apiError("Meal not found.", 404);
+  const result = await db.$transaction(async (tx) => {
+    const meal = await tx.meal.findFirst({ where: { id, userId }, select: { _count: { select: { plans: true } } } });
+    if (!meal) return "not-found";
+    if (meal._count.plans) return "in-use";
+    await tx.meal.delete({ where: { id } });
+    return "deleted";
+  });
+  if (result === "not-found") return apiError("Meal not found.", 404);
+  if (result === "in-use") return apiError("Remove this meal from all plans before deleting it.", 409);
   return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
 }

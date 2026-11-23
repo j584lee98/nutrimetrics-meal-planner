@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FoodPicker } from "@/app/components/food-picker";
 import { requestJson } from "@/lib/client-request";
-import type { BuilderEntry, BuilderFood, BuilderMeal } from "@/lib/meal-builder";
+import { defaultNutrients, type BuilderEntry, type BuilderFood, type BuilderMeal } from "@/lib/meal-builder";
 
 type DraftEntry = {
   key: string;
@@ -15,13 +15,6 @@ type DraftEntry = {
   basis: "g" | "ml" | "";
   choice: string;
 };
-
-const defaultNutrients = [
-  { id: 1008, name: "Energy", unit: "kcal" },
-  { id: 1003, name: "Protein", unit: "g" },
-  { id: 1005, name: "Carbohydrate", unit: "g" },
-  { id: 1004, name: "Total fat", unit: "g" },
-];
 
 function draftFromEntry(entry: BuilderEntry): DraftEntry {
   const portionIndex = entry.food.portions.findIndex((portion) =>
@@ -44,7 +37,7 @@ function format(value: number) {
   return value.toLocaleString(undefined, { maximumSignificantDigits: 6 });
 }
 
-export function MealBuilder({ planId, planName, meal }: { planId: string; planName: string; meal?: BuilderMeal }) {
+export function MealBuilder({ meal }: { meal?: BuilderMeal }) {
   const router = useRouter();
   const [name, setName] = useState(meal?.name ?? "");
   const [entries, setEntries] = useState<DraftEntry[]>(() => meal?.entries.map(draftFromEntry) ?? []);
@@ -111,13 +104,13 @@ export function MealBuilder({ planId, planName, meal }: { planId: string; planNa
     setSaving(true);
     setError("");
     try {
-      const url = meal ? `/api/meals/${encodeURIComponent(meal.id)}` : `/api/meal-plans/${encodeURIComponent(planId)}/meals`;
+      const url = meal ? `/api/meals/${encodeURIComponent(meal.id)}` : "/api/meals";
       await requestJson(url, {
         method: meal ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), entries: payload }),
       });
-      router.push("/dashboard");
+      router.push("/meals");
       router.refresh();
     } catch (cause) {
       console.error("Could not save meal", cause);
@@ -128,7 +121,8 @@ export function MealBuilder({ planId, planName, meal }: { planId: string; planNa
 
   return (
     <form className="builder-panel" onSubmit={save}>
-      <p className="eyebrow">MEAL BUILDER · {planName}</p>
+      <p className="eyebrow">MEAL BUILDER</p>
+      {meal && <p className="nutrient-note">Changes to this meal affect every plan that includes it.</p>}
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
       <label className="builder-name">Meal name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="e.g. Breakfast bowl" /></label>
       <FoodPicker onAdd={addFood} />
