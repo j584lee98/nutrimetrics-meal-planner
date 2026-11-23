@@ -54,7 +54,7 @@ export function FoodPicker({ onAdd, initialFoodTypes, label = "Add a food" }: { 
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams({ q: term, all: "1" });
+        const params = new URLSearchParams({ q: term });
         const data = await requestJson(`/api/foods/search?${params}`, { signal: controller.signal });
         if (typeof data !== "object" || data === null || !("foods" in data) || !Array.isArray(data.foods) ||
           !data.foods.every((food: unknown) => typeof food === "object" && food !== null &&

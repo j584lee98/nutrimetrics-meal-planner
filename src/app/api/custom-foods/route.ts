@@ -8,11 +8,18 @@ export async function GET(request: Request) {
   if (!userId) return apiError("Sign in to search custom foods.", 401);
   const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (!query || query.length > 100) return apiError("Enter a search term of 1 to 100 characters.", 400);
+  const words = query.toLowerCase().split(/\s+/);
+  const candidates = await db.food.findMany({
+    where: { ownerId: userId },
+    select: { id: true, name: true },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+  });
+  const ids = candidates.filter((food) => words.every((word) => food.name.toLowerCase().includes(word)))
+    .slice(0, 20).map((food) => food.id);
   const foods = await db.food.findMany({
-    where: { ownerId: userId, AND: query.split(/\s+/).map((word) => ({ name: { contains: word } })) },
+    where: { ownerId: userId, id: { in: ids } },
     include: foodInclude,
     orderBy: [{ name: "asc" }, { id: "asc" }],
-    take: 20,
   });
   return Response.json({ foods: foods.map(toBuilderFood) }, { headers: { "Cache-Control": "no-store" } });
 }

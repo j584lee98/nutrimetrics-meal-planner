@@ -39,37 +39,62 @@ globalThis.fetch = async (input, init) => {
       request.dataType.some((type) => !allowedTypes.includes(type))) {
     return new Response("Invalid food type filter", { status: 400 });
   }
-  if (request.query === "filter check" || request.query === "+filter +check") {
+  const clauses = [...request.query.matchAll(/\+description:\*((?:\\.|[^*\\])*)\*/g)];
+  if (!clauses.length || clauses.map((match) => match[0]).join(" ") !== request.query) {
+    return new Response("Expected required description substring clauses", { status: 400 });
+  }
+  const words = clauses.map((match) => match[1].replace(/\\(.)/g, "$1"));
+  const term = words.join(" ");
+  if (term === "filter check") {
     return Response.json({
       totalHits: request.dataType.length,
       currentPage: request.pageNumber,
       totalPages: 1,
       foods: request.dataType.map((type, index) => ({
-        fdcId: 10000 + index, description: `${type} result`, dataType: type, foodNutrients: [],
+        fdcId: 10000 + index, description: `${type} filter check result`, dataType: type, foodNutrients: [],
       })),
     });
   }
-  if (request.query.startsWith("+") && request.query !== "+red +apple") {
-    return Response.json({ totalHits: 0, currentPage: 1, totalPages: 0, foods: [] });
+  if (term === "rate limit") return new Response("", { status: 429 });
+  if (term === "bad response") return Response.json({ foods: "invalid" });
+  if (term === "mismatch") return Response.json({
+    totalHits: 1, currentPage: 1, totalPages: 1,
+    foods: [{ fdcId: 999, description: "Cheese", dataType: "Foundation", foodNutrients: [] }],
+  });
+  if (term === "apple") {
+    return Response.json({
+      totalHits: 21,
+      currentPage: request.pageNumber,
+      totalPages: 2,
+      foods: [{
+        fdcId: request.pageNumber === 1 ? 123 : 456,
+        description: request.pageNumber === 1 ? "Test apple" : "Test apple pear",
+        dataType: "Foundation",
+        foodNutrients: [
+          { nutrientId: 1003, nutrientName: "Protein", unitName: "G", value: 0.26 },
+          { nutrientId: 1004, nutrientName: "Fat", unitName: "G", value: 0, derivationDescription: "Calculated from a less than value per serving size measure" },
+          { nutrientId: 1005, nutrientName: "Unavailable", unitName: "G" },
+        ],
+      }],
+    });
   }
-  if (request.query === "rate limit") return new Response("", { status: 429 });
-  if (request.query === "bad response") return Response.json({ foods: "invalid" });
-  if (request.query === "no results") {
+  const foods = [
+    { fdcId: 123, description: "Test red apple", dataType: "Foundation" },
+    { fdcId: 201, description: "Broccoli, raw", dataType: "Foundation" },
+    { fdcId: 202, description: "Raw broccoli and egg", dataType: "Foundation" },
+    { fdcId: 203, description: "Cheese", foodCategory: "Dairy and Egg Products", dataType: "Foundation" },
+    { fdcId: 204, description: "Egg salad", foodCategory: "Dairy and Egg Products", dataType: "Foundation" },
+    { fdcId: 205, description: "Bread with 100% whole grain", dataType: "Foundation" },
+    { fdcId: 206, description: "Bread with * seasoning", dataType: "Foundation" },
+  ].filter((food) => request.dataType.includes(food.dataType) &&
+    words.every((word) => food.description.toLowerCase().includes(word)));
+  if (!foods.length) {
     return Response.json({ totalHits: 0, currentPage: 1, totalPages: 0, foods: [] });
   }
   return Response.json({
-    totalHits: 21,
+    totalHits: foods.length,
     currentPage: request.pageNumber,
-    totalPages: 2,
-    foods: [{
-      fdcId: request.pageNumber === 1 ? 123 : 456,
-      description: request.pageNumber === 1 ? "Test apple" : "Test pear",
-      dataType: "Foundation",
-      foodNutrients: [
-        { nutrientId: 1003, nutrientName: "Protein", unitName: "G", value: 0.26 },
-        { nutrientId: 1004, nutrientName: "Fat", unitName: "G", value: 0, derivationDescription: "Calculated from a less than value per serving size measure" },
-        { nutrientId: 1005, nutrientName: "Unavailable", unitName: "G" },
-      ],
-    }],
+    totalPages: 1,
+    foods: request.pageNumber === 1 ? foods.map((food) => ({ ...food, foodNutrients: [] })) : [],
   });
 };

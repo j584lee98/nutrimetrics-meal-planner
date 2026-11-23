@@ -136,11 +136,20 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   ]);
   assert.ok(!JSON.stringify(results).includes("test-usda-key"));
   const secondPage = await request("/api/foods/search?q=apple&page=2", { cookie });
-  assert.equal((await secondPage.json()).foods[0].description, "Test pear");
+  assert.equal((await secondPage.json()).foods[0].description, "Test apple pear");
   const noResults = await request("/api/foods/search?q=no%20results", { cookie });
   assert.deepEqual((await noResults.json()).foods, []);
   const allWords = await request("/api/foods/search?q=red%20apple&all=1", { cookie });
-  assert.equal((await allWords.json()).foods[0].description, "Test apple");
+  assert.equal((await allWords.json()).foods[0].description, "Test red apple");
+  for (const suffix of ["", "&all=1"]) {
+    const partial = await (await request(`/api/foods/search?q=RoCC%20%20RAW${suffix}`, { cookie })).json();
+    assert.deepEqual(partial.foods.map((food) => food.description), ["Broccoli, raw", "Raw broccoli and egg"]);
+    const egg = await (await request(`/api/foods/search?q=egg${suffix}`, { cookie })).json();
+    assert.deepEqual(egg.foods.map((food) => food.description), ["Raw broccoli and egg", "Egg salad"]);
+    const literal = await (await request(`/api/foods/search?q=%2A${suffix}`, { cookie })).json();
+    assert.deepEqual(literal.foods.map((food) => food.description), ["Bread with * seasoning"]);
+  }
+  assert.equal((await request("/api/foods/search?q=mismatch", { cookie })).status, 502);
   assert.equal((await request("/api/foods/search?q=rate%20limit", { cookie })).status, 429);
   assert.equal((await request("/api/foods/search?q=bad%20response", { cookie })).status, 502);
   const anonymous = await request("/dashboard", { redirect: "manual" });
@@ -251,6 +260,9 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal(customFood.nutrients.find((n) => n.id === 1004).value, 0);
   assert.equal(customFood.nutrients.find((n) => n.id === 1005), undefined);
   assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie })).json()).foods.map((food) => food.id), [customFood.id]);
+  assert.deepEqual((await (await request(`${customPath}?q=REA%20CUS`, { cookie })).json()).foods.map((food) => food.id), [customFood.id]);
+  assert.deepEqual((await (await request(`${customPath}?q=%25`, { cookie })).json()).foods, []);
+  assert.deepEqual((await (await request(`${customPath}?q=_`, { cookie })).json()).foods, []);
   assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie: secondCookie })).json()).foods, []);
   assert.equal((await request(`/custom-foods/${customFood.id}/copy`, { cookie: secondCookie })).status, 404);
   assert.equal((await request(`/api/custom-foods/${customFood.id}`, { cookie: secondCookie, method: "DELETE" })).status, 404);
