@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
 import { DeleteItemButton } from "@/app/components/delete-item-button";
 import { MacroSummary } from "@/app/components/macro-summary";
+import { NutrientBreakdown } from "@/app/components/nutrient-breakdown";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { mealInclude, toBuilderMeal } from "@/lib/builder-food";
@@ -25,16 +26,20 @@ export default async function PlansPage() {
         <Link href="/plans/new" className="button button-small">Create plan</Link>
         <p className="nutrient-note">Values are estimates. A dash means unavailable; partial totals exclude missing values.</p>
         {plans.length === 0 && <p className="planner-empty">You don&apos;t have any plans yet.</p>}
-        {plans.map((plan) => (
+        {plans.map((plan) => {
+          const meals = plan.meals.map(({ meal }) => toBuilderMeal(meal, session.user.id));
+          return (
           <article className="plan-card" key={plan.id}>
             <div className="plan-heading">
               <h2>{plan.name}</h2>
               <DeleteItemButton id={plan.id} name={plan.name} kind="plan" />
             </div>
-            <MacroSummary meals={plan.meals.map(({ meal }) => toBuilderMeal(meal, session.user.id))} />
+            <MacroSummary meals={meals} />
+            <NutrientBreakdown kind="plan" name={plan.name} meals={meals} />
             <Link className="button button-secondary button-small" href={`/plans/${encodeURIComponent(plan.id)}/edit`}>Edit plan<span className="visually-hidden"> {plan.name}</span></Link>
           </article>
-        ))}
+          );
+        })}
       </section>
     </main>
   );

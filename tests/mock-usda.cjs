@@ -20,7 +20,8 @@ globalThis.fetch = async (input, init) => {
       foodNutrients: [
         { nutrient: { id: 1003, name: "Protein", unitName: "G" }, amount: id === 123 ? 2 : 1 },
         ...(id === 123 ? [{ nutrient: { id: 1004, name: "Fat", unitName: "G" }, amount: 0,
-          foodNutrientDerivation: { description: "Calculated from a less than value" } }] : []),
+          foodNutrientDerivation: { description: "Calculated from a less than value" } },
+          { nutrient: { id: 1087, name: "Calcium", unitName: "MG" }, amount: 10 }] : []),
       ],
     });
   }
