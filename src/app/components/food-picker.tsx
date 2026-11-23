@@ -3,16 +3,20 @@
 import { useEffect, useState } from "react";
 import { requestJson } from "@/lib/client-request";
 import { isBuilderFood, type BuilderFood } from "@/lib/meal-builder";
+import type { FoodType } from "@/lib/food-types";
+import { FoodTypeFilter, useFoodTypeFilter } from "@/app/components/food-type-filter";
 
 type Suggestion = { fdcId: number; description: string; dataType: string | null; brand: string | null };
 
-export function FoodPicker({ onAdd }: { onAdd: (food: BuilderFood) => void }) {
+export function FoodPicker({ onAdd, initialFoodTypes }: { onAdd: (food: BuilderFood) => void; initialFoodTypes: FoodType[] }) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const filter = useFoodTypeFilter(initialFoodTypes);
+  const searchKey = `${query.trim()}\n${filter.types.join("|")}`;
 
   useEffect(() => {
     const term = query.trim();
@@ -34,7 +38,7 @@ export function FoodPicker({ onAdd }: { onAdd: (food: BuilderFood) => void }) {
         }
         if (!controller.signal.aborted) {
           setSuggestions(data.foods);
-          setSearched(term);
+          setSearched(searchKey);
         }
       } catch (cause) {
         if (controller.signal.aborted) return;
@@ -46,7 +50,7 @@ export function FoodPicker({ onAdd }: { onAdd: (food: BuilderFood) => void }) {
       }
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [query]);
+  }, [query, searchKey]);
 
   async function add(fdcId: number) {
     setAdding(true);
@@ -74,17 +78,21 @@ export function FoodPicker({ onAdd }: { onAdd: (food: BuilderFood) => void }) {
   return (
     <div className="food-picker">
       <label htmlFor="builder-food-search">Add a USDA food</label>
-      <input id="builder-food-search" type="search" value={query} disabled={adding} onChange={(event) => {
-        setQuery(event.target.value);
-        setSuggestions([]);
-        setError("");
-        setLoading(false);
-      }} placeholder="Search with one or more words" maxLength={100} autoComplete="off" />
+      <div className="food-search-input">
+        <input id="builder-food-search" type="search" value={query} disabled={adding} onChange={(event) => {
+          setQuery(event.target.value);
+          setSuggestions([]);
+          setError("");
+          setLoading(false);
+        }} placeholder="Search with one or more words" maxLength={100} autoComplete="off" />
+        <FoodTypeFilter filter={filter} />
+      </div>
+      {filter.error && <p className="form-error" role="alert">{filter.error}</p>}
       {query.trim() && (
         <div className="food-suggestions" aria-live="polite">
-          {(loading || (!error && searched !== query.trim())) && <p>Searching USDA...</p>}
-          {!loading && !error && searched === query.trim() && suggestions.length === 0 && <p>No foods found.</p>}
-          {suggestions.map((food) => (
+          {(filter.saving || loading || (!error && searched !== searchKey)) && <p>Searching USDA...</p>}
+          {!filter.saving && !loading && !error && searched === searchKey && suggestions.length === 0 && <p>{filter.types.length ? "No foods found." : "Select at least one food type to search."}</p>}
+          {!filter.saving && searched === searchKey && suggestions.map((food) => (
             <button type="button" key={food.fdcId} disabled={adding} onClick={() => void add(food.fdcId)}>
               <strong>{food.description}</strong>
               <span>{[food.dataType, food.brand].filter(Boolean).join(" · ")}</span>

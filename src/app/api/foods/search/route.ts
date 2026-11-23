@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { parseFoodSearch } from "@/lib/usda";
+import { getFoodTypePreferences } from "@/lib/food-type-preferences";
 
 const PAGE_SIZE = 20;
 
@@ -17,6 +18,10 @@ export async function GET(request: Request) {
   if (!query || query.length > 100) return error("Enter a search term of 1 to 100 characters.", 400);
   if (!/^[1-9]\d{0,3}$/.test(pageText)) return error("Invalid page number.", 400);
   const page = Number(pageText);
+  const dataType = await getFoodTypePreferences(session.user.id);
+  if (dataType.length === 0) {
+    return Response.json({ totalHits: 0, currentPage: page, totalPages: 0, foods: [] }, { headers: { "Cache-Control": "no-store" } });
+  }
   const searchQuery = params.get("all") === "1"
     ? query.split(/\s+/).map((word) => `+${word.replace(/[+\-!(){}\[\]^"~*?:\\/|&]/g, "\\$&")}`).join(" ")
     : query;
@@ -32,7 +37,7 @@ export async function GET(request: Request) {
     response = await fetch("https://api.nal.usda.gov/fdc/v1/foods/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Api-Key": key },
-      body: JSON.stringify({ query: searchQuery, pageSize: PAGE_SIZE, pageNumber: page }),
+      body: JSON.stringify({ query: searchQuery, pageSize: PAGE_SIZE, pageNumber: page, dataType }),
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });

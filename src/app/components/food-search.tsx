@@ -1,37 +1,57 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { FoodSearchResults } from "@/lib/food-search";
 import type { NutrientColumn } from "@/lib/meal-builder";
+import type { FoodType } from "@/lib/food-types";
+import { FoodTypeFilter, useFoodTypeFilter } from "@/app/components/food-type-filter";
 
-export function FoodSearch({ columns }: { columns: NutrientColumn[] }) {
+export function FoodSearch({ columns, initialFoodTypes }: { columns: NutrientColumn[]; initialFoodTypes: FoodType[] }) {
   const [query, setQuery] = useState("");
   const [searchedQuery, setSearchedQuery] = useState("");
   const [results, setResults] = useState<FoodSearchResults | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [searchVersion, setSearchVersion] = useState(0);
+  const filter = useFoodTypeFilter(initialFoodTypes);
+  const filterKey = filter.types.join("|");
+  const previousFilter = useRef(filterKey);
 
-  async function search(term: string, page: number) {
-    setError("");
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ q: term, page: String(page) });
-      const response = await fetch(`/api/foods/search?${params}`, { cache: "no-store" });
-      if (!response.ok) {
-        const body = await response.json();
-        setError(typeof body.error === "string" ? body.error : "Food search failed. Please try again.");
+  useEffect(() => {
+    if (previousFilter.current !== filterKey) {
+      previousFilter.current = filterKey;
+      if (page !== 1) {
+        setPage(1);
         return;
       }
-      const data: FoodSearchResults = await response.json();
-      setResults(data);
-      setSearchedQuery(term);
-    } catch (cause) {
-      console.error("Food search request failed", cause);
-      setError("Could not complete the search. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  }
+    if (!searchedQuery || filter.saving) return;
+    const controller = new AbortController();
+    async function search() {
+      setError("");
+      setLoading(true);
+      setResults(null);
+      try {
+        const params = new URLSearchParams({ q: searchedQuery, page: String(page) });
+        const response = await fetch(`/api/foods/search?${params}`, { cache: "no-store", signal: controller.signal });
+        if (!response.ok) {
+          const body = await response.json();
+          throw new Error(typeof body.error === "string" ? body.error : "Food search failed. Please try again.");
+        }
+        const data: FoodSearchResults = await response.json();
+        if (!controller.signal.aborted) setResults(data);
+      } catch (cause) {
+        if (controller.signal.aborted) return;
+        console.error("Food search request failed", cause);
+        setError(cause instanceof Error ? cause.message : "Could not complete the search. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    void search();
+    return () => controller.abort();
+  }, [searchedQuery, page, filterKey, filter.saving, searchVersion]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,8 +60,9 @@ export function FoodSearch({ columns }: { columns: NutrientColumn[] }) {
       setError("Enter a food to search for.");
       return;
     }
-    setResults(null);
-    void search(term, 1);
+    setPage(1);
+    setSearchedQuery(term);
+    setSearchVersion((value) => value + 1);
   }
 
   return (
@@ -51,17 +72,21 @@ export function FoodSearch({ columns }: { columns: NutrientColumn[] }) {
       <p className="search-intro">Explore foods and their reported nutrients from USDA FoodData Central.</p>
       <form className="search-form" onSubmit={submit}>
         <label className="visually-hidden" htmlFor="food-query">Search foods</label>
-        <input id="food-query" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try apple, eggs, or oatmeal" maxLength={100} required />
+        <div className="food-search-input">
+          <input id="food-query" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try apple, eggs, or oatmeal" maxLength={100} required />
+          <FoodTypeFilter filter={filter} />
+        </div>
         <button className="button" disabled={loading} type="submit">{loading ? "Searching..." : "Search foods"}</button>
       </form>
+      {filter.error && <p className="form-error search-message" role="alert">{filter.error}</p>}
       {error && <p className="form-error search-message" role="alert">{error}</p>}
       <div aria-live="polite">
         {loading && <p className="search-message">Searching USDA foods...</p>}
-        {!loading && results && (
+        {!loading && !filter.saving && results && (
           <>
             <p className="search-summary">
               {results.totalHits === 0
-                ? `No foods found for “${searchedQuery}”.`
+                ? filter.types.length ? `No foods found for “${searchedQuery}”.` : "Select at least one food type to search."
                 : `${results.totalHits.toLocaleString()} results for “${searchedQuery}”`}
             </p>
             <div className="food-list">
@@ -98,9 +123,9 @@ export function FoodSearch({ columns }: { columns: NutrientColumn[] }) {
             </div>
             {results.totalPages > 1 && (
               <nav className="pagination" aria-label="Food search pages">
-                <button className="button button-secondary button-small" disabled={loading || results.currentPage <= 1} onClick={() => void search(searchedQuery, results.currentPage - 1)}>Previous</button>
+                <button className="button button-secondary button-small" disabled={loading || results.currentPage <= 1} onClick={() => setPage(results.currentPage - 1)}>Previous</button>
                 <span>Page {results.currentPage.toLocaleString()} of {results.totalPages.toLocaleString()}</span>
-                <button className="button button-secondary button-small" disabled={loading || results.currentPage >= results.totalPages || results.currentPage >= 9999} onClick={() => void search(searchedQuery, results.currentPage + 1)}>Next</button>
+                <button className="button button-secondary button-small" disabled={loading || results.currentPage >= results.totalPages || results.currentPage >= 9999} onClick={() => setPage(results.currentPage + 1)}>Next</button>
               </nav>
             )}
           </>

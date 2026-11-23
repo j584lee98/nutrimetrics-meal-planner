@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FoodPicker } from "@/app/components/food-picker";
 import { requestJson } from "@/lib/client-request";
 import { type BuilderEntry, type BuilderFood, type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
+import type { FoodType } from "@/lib/food-types";
 
 type DraftEntry = {
   key: string;
@@ -37,7 +38,7 @@ function format(value: number) {
   return value.toLocaleString(undefined, { maximumSignificantDigits: 6 });
 }
 
-export function MealBuilder({ meal, columns }: { meal?: BuilderMeal; columns: NutrientColumn[] }) {
+export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: BuilderMeal; columns: NutrientColumn[]; initialFoodTypes: FoodType[] }) {
   const router = useRouter();
   const [name, setName] = useState(meal?.name ?? "");
   const [entries, setEntries] = useState<DraftEntry[]>(() => meal?.entries.map(draftFromEntry) ?? []);
@@ -114,7 +115,7 @@ export function MealBuilder({ meal, columns }: { meal?: BuilderMeal; columns: Nu
       {meal && <p className="nutrient-note">Changes to this meal affect every plan that includes it.</p>}
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
       <label className="builder-name">Meal name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="e.g. Breakfast bowl" /></label>
-      <FoodPicker onAdd={addFood} />
+      <FoodPicker onAdd={addFood} initialFoodTypes={initialFoodTypes} />
       <p className="nutrient-note">Values are estimates based on USDA data. A dash means unavailable; totals marked partial exclude unavailable values. Check USDA details for less-than values and unusual food bases.</p>
       {entries.length === 0 ? <p className="planner-empty">Search above to add foods to this meal.</p> : (
         <div className="table-scroll builder-table">

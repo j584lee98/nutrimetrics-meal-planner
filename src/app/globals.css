@@ -86,7 +86,8 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .search-panel h2 { margin: 12px 0; font-size: 34px; letter-spacing: -1px; }
 .search-intro, .search-message, .search-summary, .source-note, .nutrient-note { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .search-form { display: flex; gap: 10px; margin-top: 24px; }
-.search-form input { flex: 1; min-width: 0; padding: 12px; border: 1px solid #cbd6c9; border-radius: 6px; color: var(--ink); background: white; font: inherit; }
+.search-form > .food-search-input { flex: 1; min-width: 0; }
+.search-form input[type="search"] { width: 100%; min-width: 0; padding: 12px 48px 12px 12px; border: 1px solid #cbd6c9; border-radius: 6px; color: var(--ink); background: white; font: inherit; }
 .search-form input:focus-visible { outline: 3px solid #9db89b; outline-offset: 2px; }
 .search-message, .search-summary { margin: 24px 0 0; }
 .food-result { padding: 22px 0; border-bottom: 1px solid var(--line); }
@@ -135,10 +136,21 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .builder-panel { margin: 35px auto 0; padding: 38px; border: 1px solid var(--line); border-radius: 12px; background: white; }
 .builder-panel h1 { margin: 12px 0 25px; font-size: clamp(36px, 4vw, 48px); letter-spacing: -1.5px; }
 .builder-name, .food-picker > label { display: grid; gap: 8px; max-width: 500px; font-size: 13px; font-weight: 700; }
-.builder-name input, .food-picker > input, .portion-controls input, .portion-controls select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #cbd6c9; border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+.builder-name input, .food-picker input[type="search"], .portion-controls input, .portion-controls select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #cbd6c9; border-radius: 6px; background: white; color: var(--ink); font: inherit; }
 .builder-name input:focus-visible, .food-picker input:focus-visible, .portion-controls input:focus-visible, .portion-controls select:focus-visible { outline: 3px solid #9db89b; outline-offset: 2px; }
 .food-picker { position: relative; max-width: 500px; margin: 24px 0; }
-.food-picker > input { margin-top: 8px; }
+.food-picker .food-search-input { margin-top: 8px; }
+.food-picker input[type="search"] { padding-right: 48px; }
+.food-search-input { position: relative; }
+.food-type-filter { position: absolute; z-index: 4; right: 4px; top: 50%; transform: translateY(-50%); }
+.food-type-filter summary { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 5px; color: var(--green); cursor: pointer; list-style: none; }
+.food-type-filter summary::-webkit-details-marker { display: none; }
+.food-type-filter summary:hover, .food-type-filter[open] summary { background: #e6eee3; }
+.food-type-filter summary:focus-visible { outline: 3px solid #9db89b; outline-offset: 1px; }
+.food-type-menu { position: absolute; top: calc(100% + 6px); right: 0; width: 240px; margin: 0; padding: 12px 15px 14px; border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: 0 8px 18px #263d3226; }
+.food-type-menu legend { padding: 0 4px; color: var(--ink); font-size: 13px; font-weight: 700; }
+.food-type-menu label { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; }
+.food-type-menu p { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .food-suggestions { position: absolute; z-index: 2; top: 100%; left: 0; right: 0; max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; background: white; box-shadow: 0 8px 18px #263d321c; }
 .food-suggestions button { display: grid; width: 100%; gap: 5px; padding: 12px; border: 0; border-bottom: 1px solid var(--line); background: white; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .food-suggestions button:hover, .food-suggestions button:focus-visible { background: #eef3e9; }
@@ -148,6 +160,9 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .food-picker .form-error, .food-picker .field-hint { margin: 8px 0; }
 .column-options { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 14px; }
 .column-options label { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.food-type-options { margin-bottom: 20px; }
+.food-type-options-list { padding: 0; border: 0; }
+.food-type-options-list label { font-size: 13px; }
 .selected-nutrients { display: grid; gap: 8px; max-width: 500px; margin: 16px 0 28px; padding: 0; list-style: none; }
 .selected-nutrients li { position: relative; }
 .selected-nutrients li[data-drop]::after { position: absolute; right: 0; left: 0; height: 3px; border-radius: 2px; background: var(--green); content: ""; }

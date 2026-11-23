@@ -34,6 +34,21 @@ globalThis.fetch = async (input, init) => {
   }
   if (url.pathname !== "/fdc/v1/foods/search") return new Response("", { status: 404 });
   const request = JSON.parse(init.body);
+  const allowedTypes = ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"];
+  if (!Array.isArray(request.dataType) || request.dataType.length === 0 ||
+      request.dataType.some((type) => !allowedTypes.includes(type))) {
+    return new Response("Invalid food type filter", { status: 400 });
+  }
+  if (request.query === "filter check" || request.query === "+filter +check") {
+    return Response.json({
+      totalHits: request.dataType.length,
+      currentPage: request.pageNumber,
+      totalPages: 1,
+      foods: request.dataType.map((type, index) => ({
+        fdcId: 10000 + index, description: `${type} result`, dataType: type, foodNutrients: [],
+      })),
+    });
+  }
   if (request.query.startsWith("+") && request.query !== "+red +apple") {
     return Response.json({ totalHits: 0, currentPage: 1, totalPages: 0, foods: [] });
   }

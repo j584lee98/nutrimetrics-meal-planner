@@ -151,6 +151,41 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   });
   assert.equal(secondSignup.status, 200);
   const secondCookie = cookieFrom(secondSignup);
+  const typesPath = "/api/foods/preferences";
+  const allTypes = ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"];
+  assert.equal((await request(typesPath)).status, 401);
+  assert.equal((await request(typesPath, { method: "PUT", body: { types: [] } })).status, 401);
+  assert.equal((await request(typesPath, { cookie, method: "PUT", origin: "https://evil.example", body: { types: [] } })).status, 403);
+  const initialTypes = await request(typesPath, { cookie });
+  assert.equal(initialTypes.headers.get("cache-control"), "no-store");
+  assert.deepEqual((await initialTypes.json()).types, allTypes);
+  for (const types of [["Experimental"], ["Foundation", "Foundation"], ["invalid"], null, "Branded"]) {
+    assert.equal((await request(typesPath, { cookie, method: "PUT", body: { types } })).status, 400);
+  }
+  const selectedTypes = ["SR Legacy", "Branded"];
+  const savedTypes = await request(typesPath, { cookie, method: "PUT", body: { types: selectedTypes } });
+  assert.equal(savedTypes.status, 200);
+  assert.equal(savedTypes.headers.get("cache-control"), "no-store");
+  assert.deepEqual((await (await request(typesPath, { cookie })).json()).types, selectedTypes);
+  assert.deepEqual((await (await request(typesPath, { cookie: secondCookie })).json()).types, allTypes);
+  for (const path of ["/options", "/meals/new", "/foods"]) {
+    const html = (await (await request(path, { cookie })).text()).replaceAll("<!-- -->", "");
+    assert.match(html, /<input type="checkbox"\/>Foundation/);
+    assert.match(html, /<input type="checkbox" checked=""\/>SR Legacy/);
+    assert.match(html, /<input type="checkbox" checked=""\/>Branded/);
+    assert.doesNotMatch(html, /Experimental/);
+  }
+  for (const path of ["/api/foods/search?q=filter%20check", "/api/foods/search?q=filter%20check&all=1&page=2"]) {
+    const filtered = await (await request(path, { cookie })).json();
+    assert.deepEqual(filtered.foods.map((food) => food.dataType), selectedTypes);
+  }
+  assert.deepEqual((await (await request("/api/foods/search?q=filter%20check", { cookie: secondCookie })).json()).foods.map((food) => food.dataType), allTypes);
+  assert.equal((await request(typesPath, { cookie, method: "PUT", body: { types: [] } })).status, 200);
+  const none = await request("/api/foods/search?q=rate%20limit", { cookie });
+  assert.equal(none.status, 200);
+  assert.deepEqual((await none.json()).foods, []);
+  assert.deepEqual((await (await request(typesPath, { cookie })).json()).types, []);
+  assert.equal((await request(typesPath, { cookie, method: "PUT", body: { types: allTypes } })).status, 200);
   const options = await request("/options", { cookie });
   assert.equal(options.status, 200);
   const optionsHtml = (await options.text()).replaceAll("<!-- -->", "");
@@ -415,6 +450,7 @@ test("authentication migration preserves existing records", { timeout: 60000 }, 
   runPrisma(["migrate", "deploy"]);
   assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "old-user" } })).passwordHash, "old-hash");
   assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "old-user" } })).nutrientPreferences, null);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: "old-user" } })).foodTypePreferences, null);
   assert.equal((await prisma.session.findUniqueOrThrow({ where: { id: "old-session" } })).token, "old-token-hash");
   assert.equal((await prisma.food.findUniqueOrThrow({ where: { id: "old-food" } })).ownerId, "old-user");
   assert.equal((await prisma.mealPlan.findUniqueOrThrow({ where: { id: "old-plan" } })).userId, "old-user");
