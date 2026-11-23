@@ -184,7 +184,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const unknown = await (await request("/api/foods/import", { cookie, body: { fdcId: 789 } })).json();
   assert.equal(unknown.basis, "unknown");
   assert.equal((await request("/api/foods/import", { cookie, body: { fdcId: 999 } })).status, 404);
-  const entry = { foodId: apple.id, quantity: 2, unitLabel: "apple", basisPerUnit: 150, basis: "g" };
+  const entry = { foodId: apple.id, quantity: 2, unitLabel: "whole apple", basisPerUnit: 150, basis: "g" };
   assert.equal((await request(mealsPath, { cookie, body: { name: " ", entries: [] } })).status, 400);
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, quantity: 0 }] } })).status, 400);
   assert.equal((await request(mealsPath, { cookie, body: { name: "Bad", entries: [{ ...entry, basisPerUnit: -1 }] } })).status, 400);
@@ -253,7 +253,9 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(mealsHtml, /<dt>Protein \(g\)<\/dt><dd>5<\/dd>/);
   assert.match(mealsHtml, /<dt>Protein \(g\)<\/dt><dd>6<\/dd>/);
   assert.match(mealsHtml, /<caption class="visually-hidden">Dinner nutrient breakdown<\/caption>/);
-  assert.match(mealsHtml, /<th scope="row">Test apple<\/th><td>2 apple<\/td><td>—<\/td><td>6<\/td><td>—<\/td><td>0<\/td>/);
+  assert.match(mealsHtml, /<th scope="col">Food<\/th><th scope="col">Amount<\/th><th scope="col">Unit<\/th>/);
+  assert.match(mealsHtml, /<th scope="row">Test apple<\/th><td>2<\/td><td>whole apple<\/td><td>—<\/td><td>6<\/td><td>—<\/td><td>0<\/td>/);
+  assert.match(mealsHtml, /<th scope="row">Total<\/th><td><\/td><td><\/td><td>—<\/td><td>6<\/td><td>—<\/td><td>0<\/td>/);
   assert.doesNotMatch(mealsHtml, /Your plans\./);
   assert.doesNotMatch(await (await request("/meals", { cookie: secondCookie })).text(), /Brunch|Dinner/);
   assert.doesNotMatch(await (await request("/plans", { cookie: secondCookie })).text(), /Renamed/);
@@ -265,7 +267,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.match(selectedPlans, /<th scope="col">Calcium \(mg\)<\/th><th scope="col">Protein \(g\)<\/th>/);
   assert.match(selectedPlans, /<th scope="row">Brunch<\/th><td>—<\/td><td>5<\/td>/);
   const selectedMeals = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
-  assert.match(selectedMeals, /<th scope="row">Test apple<\/th><td>2 apple<\/td><td>30<\/td><td>6<\/td>/);
+  assert.match(selectedMeals, /<th scope="row">Test apple<\/th><td>2<\/td><td>whole apple<\/td><td>30<\/td><td>6<\/td>/);
   for (const path of ["/meals/new", `/meals/${meal.id}/edit`, "/plans/new", `/plans/${plan.id}/edit`, "/foods"]) {
     const html = await (await request(path, { cookie })).text();
     assert.match(html, /Calcium/);
@@ -276,6 +278,9 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [] } })).status, 200);
   const emptyPlans = (await (await request("/plans", { cookie })).text()).replaceAll("<!-- -->", "");
   assert.match(emptyPlans, /<th scope="col">Meal<\/th><\/tr>/);
+  const emptyMeals = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
+  assert.match(emptyMeals, /<th scope="col">Food<\/th><th scope="col">Amount<\/th><th scope="col">Unit<\/th><\/tr>/);
+  assert.match(emptyMeals, /<th scope="row">Total<\/th><td><\/td><td><\/td><\/tr>/);
   assert.match(await (await request("/options", { cookie })).text(), /No nutrients selected/);
   assert.equal((await request("/api/options", { cookie, method: "PUT", body: { nutrientIds: [1008, 1003, 1005, 1004] } })).status, 200);
   const plansResponse = await request("/api/meal-plans", { cookie });

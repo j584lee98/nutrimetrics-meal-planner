@@ -16,14 +16,14 @@ export function NutrientBreakdown(props: ({ kind: "meal"; meal: BuilderMeal } | 
           <caption className="visually-hidden">{name} nutrient breakdown</caption>
           <thead><tr>
             <th scope="col">{props.kind === "meal" ? "Food" : "Meal"}</th>
-            {props.kind === "meal" && <th scope="col">Amount</th>}
+            {props.kind === "meal" && <><th scope="col">Amount</th><th scope="col">Unit</th></>}
             {columns.map((column) => <th scope="col" key={column.id}>{column.name} ({column.unit})</th>)}
           </tr></thead>
           <tbody>
             {props.kind === "meal" ? props.meal.entries.map((entry) => (
               <tr key={entry.key}>
                 <th scope="row">{entry.food.name}</th>
-                <td>{entry.quantity} {entry.unitLabel}</td>
+                <td>{entry.quantity}</td><td>{entry.unitLabel}</td>
                 {columns.map((column) => {
                   const value = entryValue(entry, column.id);
                   return <td key={column.id}>{displayTotal(value === null ? null : { value, partial: false })}</td>;
@@ -38,7 +38,7 @@ export function NutrientBreakdown(props: ({ kind: "meal"; meal: BuilderMeal } | 
           </tbody>
           <tfoot><tr>
             <th scope="row">Total</th>
-            {props.kind === "meal" && <td></td>}
+            {props.kind === "meal" && <><td></td><td></td></>}
             {columns.map((column) => <td key={column.id}>{displayTotal(planTotal(meals, column.id))}</td>)}
           </tr></tfoot>
         </table>
