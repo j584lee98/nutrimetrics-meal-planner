@@ -134,6 +134,7 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .builder-page { max-width: 1440px; }
 .builder-back-link { display: inline-block; margin-top: 24px; }
 .builder-panel { margin: 35px auto 0; padding: 38px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.builder-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
 .builder-panel h1 { margin: 12px 0 25px; font-size: clamp(36px, 4vw, 48px); letter-spacing: -1.5px; }
 .builder-name, .food-picker > label { display: grid; gap: 8px; max-width: 500px; font-size: 13px; font-weight: 700; }
 .builder-name input, .food-picker input[type="search"], .portion-controls input, .portion-controls select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #cbd6c9; border-radius: 6px; background: white; color: var(--ink); font: inherit; }

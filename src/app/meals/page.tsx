@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppNav } from "@/app/components/app-nav";
@@ -25,7 +24,8 @@ export default async function MealsPage() {
       <div className="lookup-heading"><h1>Meals</h1></div>
       <section className="search-panel" aria-label="Meals">
         <p className="search-intro">Meals can be used in multiple plans. Editing a meal updates every plan that includes it.</p>
-        <Link href="/meals/new" className="button button-small">Create meal</Link>
+        {/* Builder entry must be a document navigation for its leave-page warning. */}
+        <a href="/meals/new" className="button button-small">Create meal</a>
         <p className="nutrient-note">Values are estimates. A dash means unavailable; partial totals exclude missing values.</p>
         {meals.length === 0 && <p className="planner-empty">You don&apos;t have any meals yet.</p>}
         {meals.map((meal) => {
@@ -39,7 +39,7 @@ export default async function MealsPage() {
             {meal._count.plans > 0 && <p className="meal-usage">Used in {meal._count.plans} {meal._count.plans === 1 ? "plan" : "plans"}</p>}
             <MacroSummary meals={[builderMeal]} />
             <NutrientBreakdown kind="meal" meal={builderMeal} columns={columns} />
-            <Link className="button button-secondary button-small" href={`/meals/${encodeURIComponent(meal.id)}/edit`}>Edit meal<span className="visually-hidden"> {meal.name}</span></Link>
+            <a className="button button-secondary button-small" href={`/meals/${encodeURIComponent(meal.id)}/edit`}>Edit meal<span className="visually-hidden"> {meal.name}</span></a>
           </article>
           );
         })}

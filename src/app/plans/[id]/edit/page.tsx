@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { PlanBuilder } from "@/app/components/plan-builder";
@@ -23,8 +22,8 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
   const columns = await getNutrientPreferences(session.user.id);
   return (
     <main className="auth-page builder-page">
-      <AppNav current="plans" />
-      <Link href="/plans" className="back-link builder-back-link">← Back to your plans</Link>
+      <AppNav current="plans" documentNavigation />
+      <a href="/plans" className="back-link builder-back-link">← Back to your plans</a>
       <PlanBuilder meals={meals.map((meal) => toBuilderMeal(meal, session.user.id))} columns={columns}
         plan={{ id: plan.id, name: plan.name, mealIds: plan.meals.map((meal) => meal.mealId) }} />
     </main>

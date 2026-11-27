@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { MealBuilder } from "@/app/components/meal-builder";
@@ -14,8 +13,8 @@ export default async function NewMealPage() {
   const foodTypes = await getFoodTypePreferences(session.user.id);
   return (
     <main className="auth-page builder-page">
-      <AppNav current="meals" />
-      <Link href="/meals" className="back-link builder-back-link">← Back to your meals</Link>
+      <AppNav current="meals" documentNavigation />
+      <a href="/meals" className="back-link builder-back-link">← Back to your meals</a>
       <MealBuilder columns={columns} initialFoodTypes={foodTypes} />
     </main>
   );

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -15,8 +14,8 @@ export default async function NewPlanPage() {
   const meals = await db.meal.findMany({ where: { userId: session.user.id }, include: mealInclude, orderBy: [{ name: "asc" }, { id: "asc" }] });
   return (
     <main className="auth-page builder-page">
-      <AppNav current="plans" />
-      <Link href="/plans" className="back-link builder-back-link">← Back to your plans</Link>
+      <AppNav current="plans" documentNavigation />
+      <a href="/plans" className="back-link builder-back-link">← Back to your plans</a>
       <PlanBuilder meals={meals.map((meal) => toBuilderMeal(meal, session.user.id))} columns={columns} />
     </main>
   );

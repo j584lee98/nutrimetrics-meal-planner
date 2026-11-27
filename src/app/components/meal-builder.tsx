@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { FoodPicker } from "@/app/components/food-picker";
 import { CustomFoodPicker } from "@/app/components/custom-food-picker";
+import { useUnsavedChanges } from "@/app/components/use-unsaved-changes";
 import { requestJson } from "@/lib/client-request";
 import { type BuilderEntry, type BuilderFood, type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 import type { FoodType } from "@/lib/food-types";
@@ -39,10 +39,16 @@ function format(value: number) {
   return value.toLocaleString(undefined, { maximumSignificantDigits: 6 });
 }
 
+function snapshot(name: string, entries: DraftEntry[]) {
+  return JSON.stringify({ name, entries: entries.map(({ food, quantity, unitLabel, basisPerUnit, basis }) =>
+    ({ foodId: food.id, quantity, unitLabel, basisPerUnit, basis })) });
+}
+
 export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: BuilderMeal; columns: NutrientColumn[]; initialFoodTypes: FoodType[] }) {
-  const router = useRouter();
   const [name, setName] = useState(meal?.name ?? "");
   const [entries, setEntries] = useState<DraftEntry[]>(() => meal?.entries.map(draftFromEntry) ?? []);
+  const [initial] = useState(() => snapshot(name, entries));
+  const allowNavigation = useUnsavedChanges(snapshot(name, entries) !== initial);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -101,8 +107,8 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), entries: payload }),
       });
-      router.push("/meals");
-      router.refresh();
+      allowNavigation();
+      window.location.replace("/meals");
     } catch (cause) {
       console.error("Could not save meal", cause);
       setError(cause instanceof Error ? cause.message : "Could not save the meal.");
@@ -112,6 +118,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
 
   return (
     <form className="builder-panel" onSubmit={save}>
+      <fieldset className="builder-fields" disabled={saving}>
       <p className="eyebrow">MEAL BUILDER</p>
       {meal && <p className="nutrient-note">Changes to this meal affect every plan that includes it.</p>}
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
@@ -175,6 +182,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
       )}
       {error && <p className="form-error search-message" role="alert">{error}</p>}
       <div className="builder-actions"><button className="button" disabled={saving}>{saving ? "Saving..." : "Save meal"}</button></div>
+      </fieldset>
     </form>
   );
 }

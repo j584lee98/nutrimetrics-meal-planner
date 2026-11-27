@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useUnsavedChanges } from "@/app/components/use-unsaved-changes";
 import { requestJson } from "@/lib/client-request";
 import { type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 import { displayTotal, mealTotal, planTotal } from "@/lib/nutrition-totals";
@@ -15,6 +16,8 @@ export function PlanBuilder({ meals, plan, columns }: {
   const router = useRouter();
   const [name, setName] = useState(plan?.name ?? "");
   const [mealIds, setMealIds] = useState<string[]>(plan?.mealIds ?? []);
+  const [initial] = useState(() => JSON.stringify({ name, mealIds }));
+  const allowNavigation = useUnsavedChanges(JSON.stringify({ name, mealIds }) !== initial);
   const [choice, setChoice] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -33,8 +36,8 @@ export function PlanBuilder({ meals, plan, columns }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), mealIds }),
       });
-      router.push("/plans");
-      router.refresh();
+      allowNavigation();
+      window.location.replace("/plans");
     } catch (cause) {
       console.error("Could not save plan", cause);
       setError(cause instanceof Error ? cause.message : "Could not save the plan.");
@@ -44,6 +47,7 @@ export function PlanBuilder({ meals, plan, columns }: {
 
   return (
     <form className="builder-panel" onSubmit={save}>
+      <fieldset className="builder-fields" disabled={saving}>
       <p className="eyebrow">MEAL PLAN BUILDER</p>
       <h1>{plan ? "Edit your plan." : "Build a plan."}</h1>
       <label className="builder-name">Plan name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required /></label>
@@ -80,6 +84,7 @@ export function PlanBuilder({ meals, plan, columns }: {
       )}
       {error && <p className="form-error search-message" role="alert">{error}</p>}
       <div className="builder-actions"><button className="button" disabled={saving}>{saving ? "Saving..." : "Save plan"}</button></div>
+      </fieldset>
     </form>
   );
 }
