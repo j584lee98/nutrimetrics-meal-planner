@@ -6,15 +6,21 @@ import { nutrientCatalog } from "@/lib/nutrient-preferences";
 export async function GET(request: Request) {
   const userId = await getUserId(request);
   if (!userId) return apiError("Sign in to search custom foods.", 401);
-  const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
-  if (!query || query.length > 100) return apiError("Enter a search term of 1 to 100 characters.", 400);
+  const params = new URL(request.url).searchParams;
+  const queryParam = params.get("q");
+  const query = queryParam?.trim() ?? "";
+  if ((queryParam !== null && !query) || query.length > 100) return apiError("Enter a search term of 1 to 100 characters.", 400);
+  const pageText = params.get("page") ?? "1";
+  if (!/^[1-9]\d{0,3}$/.test(pageText)) return apiError("Invalid page number.", 400);
+  const page = Number(pageText);
   const foods = await db.food.findMany({
-    where: { ownerId: userId, AND: query.split(/\s+/).map((word) => ({ name: { contains: word } })) },
+    where: { ownerId: userId, ...(query ? { AND: query.split(/\s+/).map((word) => ({ name: { contains: word } })) } : {}) },
     include: foodInclude,
     orderBy: [{ name: "asc" }, { id: "asc" }],
-    take: 20,
+    skip: (page - 1) * 20,
+    take: 21,
   });
-  return Response.json({ foods: foods.map(toBuilderFood) }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ foods: foods.slice(0, 20).map(toBuilderFood), hasMore: foods.length > 20 }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {

@@ -261,6 +261,21 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal(customFood.nutrients.find((n) => n.id === 1005), undefined);
   assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie })).json()).foods.map((food) => food.id), [customFood.id]);
   assert.deepEqual((await (await request(`${customPath}?q=custom%20bread`, { cookie: secondCookie })).json()).foods, []);
+  assert.equal((await request(customPath)).status, 401);
+  assert.equal((await request(`${customPath}?page=0`, { cookie })).status, 400);
+  assert.equal((await request(`${customPath}?q=%20`, { cookie })).status, 400);
+  const customOwner = await prisma.user.findUniqueOrThrow({ where: { email: "test@example.com" } });
+  await prisma.food.createMany({ data: Array.from({ length: 20 }, (_, i) => ({
+    name: `Browse food ${String(i).padStart(2, "0")}`, ownerId: customOwner.id, nutrientBasis: "g", defaultAmount: 100, defaultUnit: "g",
+  })) });
+  const browseFirst = await (await request(customPath, { cookie })).json();
+  assert.equal(browseFirst.foods.length, 20);
+  assert.equal(browseFirst.hasMore, true);
+  const browseSecond = await (await request(`${customPath}?page=2`, { cookie })).json();
+  assert.deepEqual(browseSecond.foods.map((food) => food.id), [customFood.id]);
+  assert.equal(browseSecond.hasMore, false);
+  assert.deepEqual((await (await request(customPath, { cookie: secondCookie })).json()).foods, []);
+  await prisma.food.deleteMany({ where: { ownerId: customOwner.id, name: { startsWith: "Browse food " } } });
   assert.equal((await request(`/custom-foods/${customFood.id}/copy`, { cookie: secondCookie })).status, 404);
   assert.equal((await request(`/api/custom-foods/${customFood.id}`, { cookie: secondCookie, method: "DELETE" })).status, 404);
   const customEntry = { foodId: customFood.id, quantity: 4, unitLabel: "slice", basisPerUnit: 1, basis: "unit" };
@@ -268,6 +283,10 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   const customMealResponse = await request(mealsPath, { cookie, body: { name: "Custom meal", entries: [customEntry] } });
   assert.equal(customMealResponse.status, 201);
   const customMeal = await customMealResponse.json();
+  const customEditPage = await request(`/meals/${customMeal.id}/edit`, { cookie });
+  assert.equal(customEditPage.status, 200);
+  assert.match(await customEditPage.text(), /Browse custom foods/);
+  assert.equal((await request(`/api/meals/${customMeal.id}`, { cookie, method: "PUT", body: { name: "Custom meal", entries: [customEntry] } })).status, 200);
   const customMealPage = (await (await request("/meals", { cookie })).text()).replaceAll("<!-- -->", "");
   assert.match(customMealPage, /Test custom bread/);
   assert.match(customMealPage, />12</);

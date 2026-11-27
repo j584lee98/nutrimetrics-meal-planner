@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { FoodPicker } from "@/app/components/food-picker";
+import { CustomFoodPicker } from "@/app/components/custom-food-picker";
 import { requestJson } from "@/lib/client-request";
 import { type BuilderEntry, type BuilderFood, type BuilderMeal, type NutrientColumn } from "@/lib/meal-builder";
 import type { FoodType } from "@/lib/food-types";
@@ -116,6 +117,7 @@ export function MealBuilder({ meal, columns, initialFoodTypes }: { meal?: Builde
       <h1>{meal ? "Edit your meal." : "Build a meal."}</h1>
       <label className="builder-name">Meal name<input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required placeholder="e.g. Breakfast bowl" /></label>
       <FoodPicker onAdd={addFood} initialFoodTypes={initialFoodTypes} />
+      <CustomFoodPicker onAdd={addFood} />
       <p className="nutrient-note">Values are estimates based on USDA or custom data. A dash means unavailable; totals marked partial exclude unavailable values. Check USDA details for less-than values and unusual food bases.</p>
       {entries.length === 0 ? <p className="planner-empty">Search above to add foods to this meal.</p> : (
         <div className="table-scroll builder-table">
