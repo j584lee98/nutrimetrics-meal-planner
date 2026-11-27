@@ -39,6 +39,15 @@ globalThis.fetch = async (input, init) => {
       request.dataType.some((type) => !allowedTypes.includes(type))) {
     return new Response("Invalid food type filter", { status: 400 });
   }
+  if (request.requireAllWords !== true) return new Response("Require all words must be enabled", { status: 400 });
+  if (request.query === "greek yogurt nonfat plain") {
+    const counts = { Foundation: 1, "SR Legacy": 2, "Survey (FNDDS)": 1, Branded: 126 };
+    const totalHits = request.dataType.reduce((total, type) => total + counts[type], 0);
+    return Response.json({
+      totalHits, currentPage: request.pageNumber, totalPages: Math.ceil(totalHits / request.pageSize),
+      foods: [{ fdcId: 330137, description: "Yogurt, Greek, plain, nonfat", dataType: request.dataType[0], foodNutrients: [] }],
+    });
+  }
   if (request.query === "filter check") {
     return Response.json({
       totalHits: request.dataType.length,

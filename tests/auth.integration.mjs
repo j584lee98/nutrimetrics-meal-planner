@@ -139,6 +139,10 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal((await secondPage.json()).foods[0].description, "Test pear");
   const noResults = await request("/api/foods/search?q=no%20results", { cookie });
   assert.deepEqual((await noResults.json()).foods, []);
+  const yogurtQuery = "/api/foods/search?q=greek%20yogurt%20nonfat%20plain";
+  const yogurt = await request(yogurtQuery, { cookie });
+  assert.equal(yogurt.status, 200);
+  assert.equal((await yogurt.json()).totalHits, 130);
   for (const suffix of ["", "&all=1"]) {
     const raw = await (await request(`/api/foods/search?q=RAW%20%2B%20Brocc${suffix}`, { cookie })).json();
     assert.deepEqual(raw.foods.map((food) => food.description), ["Cheese"]);
@@ -172,6 +176,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   assert.equal(savedTypes.status, 200);
   assert.equal(savedTypes.headers.get("cache-control"), "no-store");
   assert.deepEqual((await (await request(typesPath, { cookie })).json()).types, selectedTypes);
+  assert.equal((await (await request(yogurtQuery, { cookie })).json()).totalHits, 128);
   assert.deepEqual((await (await request(typesPath, { cookie: secondCookie })).json()).types, allTypes);
   for (const path of ["/options", "/meals/new", "/foods"]) {
     const html = (await (await request(path, { cookie })).text()).replaceAll("<!-- -->", "");

@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     response = await fetch("https://api.nal.usda.gov/fdc/v1/foods/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Api-Key": key },
-      body: JSON.stringify({ query, pageSize: PAGE_SIZE, pageNumber: page, dataType }),
+      body: JSON.stringify({ query, requireAllWords: true, pageSize: PAGE_SIZE, pageNumber: page, dataType }),
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
     });
