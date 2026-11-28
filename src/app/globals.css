@@ -158,6 +158,9 @@ footer > span:first-child { color: var(--ink); font-weight: bold; }
 .food-suggestions button:disabled { opacity: .6; cursor: wait; }
 .food-suggestions button span, .food-suggestions p { color: var(--muted); font-size: 12px; }
 .food-suggestions p { padding: 12px; margin: 0; }
+.food-suggestions .food-suggestion-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; color: var(--muted); font-size: 12px; }
+.food-suggestions .food-suggestion-pages button { display: inline-block; width: auto; padding: 8px; border: 0; color: var(--green); text-align: center; }
+.food-suggestions .food-suggestion-pages button:disabled { cursor: default; }
 .food-picker .form-error, .food-picker .field-hint { margin: 8px 0; }
 .custom-food-picker { max-width: 500px; margin: -12px 0 24px; }
 .custom-food-picker section { margin-top: 12px; }

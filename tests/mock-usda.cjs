@@ -59,6 +59,7 @@ globalThis.fetch = async (input, init) => {
     });
   }
   if (request.query === "rate limit") return new Response("", { status: 429 });
+  if (request.query === "page error" && request.pageNumber === 2) return new Response("", { status: 429 });
   if (request.query === "bad response") return Response.json({ foods: "invalid" });
   if (request.query === "RAW + Brocc") return Response.json({
     totalHits: 1, currentPage: 1, totalPages: 1,

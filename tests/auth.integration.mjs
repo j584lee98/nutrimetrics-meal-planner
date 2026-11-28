@@ -136,7 +136,10 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
   ]);
   assert.ok(!JSON.stringify(results).includes("test-usda-key"));
   const secondPage = await request("/api/foods/search?q=apple&page=2", { cookie });
-  assert.equal((await secondPage.json()).foods[0].description, "Test pear");
+  const secondPageResults = await secondPage.json();
+  assert.equal(secondPageResults.currentPage, 2);
+  assert.equal(secondPageResults.totalPages, 2);
+  assert.equal(secondPageResults.foods[0].description, "Test pear");
   const noResults = await request("/api/foods/search?q=no%20results", { cookie });
   assert.deepEqual((await noResults.json()).foods, []);
   const yogurtQuery = "/api/foods/search?q=greek%20yogurt%20nonfat%20plain";
@@ -150,6 +153,7 @@ test("accounts and database-backed sessions work end to end", { timeout: 60000 }
     assert.deepEqual(egg.foods.map((food) => food.description), ["Cheese"]);
   }
   assert.equal((await request("/api/foods/search?q=rate%20limit", { cookie })).status, 429);
+  assert.equal((await request("/api/foods/search?q=page%20error&page=2", { cookie })).status, 429);
   assert.equal((await request("/api/foods/search?q=bad%20response", { cookie })).status, 502);
   const anonymous = await request("/dashboard", { redirect: "manual" });
   assert.equal(anonymous.status, 307);
